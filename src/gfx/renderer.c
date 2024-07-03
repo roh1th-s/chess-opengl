@@ -4,66 +4,109 @@
 
 #include "renderer.h"
 #include "window.h"
-#include "vertex.h"
+#include "vao.h"
 #include "shader.h"
 #include "../types.h"
-#include "../gl_error.h"
+#include "gl_error.h"
 
-int renderer_init(Renderer *r, Window *window)
+int renderer_init(Renderer *self, Window *window)
 {
     if (glewInit() != GLEW_OK)
     {
         printf("Error!\n");
         return -1;
     }
-    // setup buffers
-    GL_CALL(glGenVertexArrays(1, &r->vao));
-    GL_CALL(glBindVertexArray(r->vao));
 
-    GL_CALL(glGenBuffers(1, &r->vertexBufferId));              // create a buffer
-    GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, r->vertexBufferId)); // select (bind) it
+    self->window = window;
 
-    // tell opengl how to interpret the vertex attributes
-    GL_CALL(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 7 * sizeof(float), 0));
-    GL_CALL(glEnableVertexAttribArray(0)); // enable this vertex attribute
-    GL_CALL(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (const void *)(2 * sizeof(float))));
-    GL_CALL(glEnableVertexAttribArray(1));
-    GL_CALL(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (const void *)(5 * sizeof(float))));
-    GL_CALL(glEnableVertexAttribArray(2));
+    // create buffers
+    GL_CALL(glGenBuffers(1, &self->vbo));
+    GL_CALL(glGenBuffers(1, &self->ibo));
 
-    GL_CALL(glGenBuffers(1, &r->indexBufferId));
-    GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, r->indexBufferId));
+    VAO vao1 = vao_create();
+    vao_bind(vao1);
+    GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, self->vbo)); // bind it
+    GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->ibo));
+    GLsizei stride = 7 * sizeof(float);
+    vao_attr(vao1, 0, 2, GL_FLOAT, stride, 0);
+    vao_attr(vao1, 1, 3, GL_FLOAT, stride, 2 * sizeof(float));
+    vao_attr(vao1, 2, 2, GL_FLOAT, stride, 5 * sizeof(float));
+    self->vaos[VAO_BASIC_COLOR_TEX] = vao1;
+
+    VAO vao2 = vao_create();
+    vao_bind(vao2);
+    GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, self->vbo)); // same buffers for both vaos
+    GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->ibo));
+    stride = 4 * sizeof(float);
+    vao_attr(vao2, 0, 2, GL_FLOAT, stride, 0);
+    vao_attr(vao2, 1, 2, GL_FLOAT, stride, 2 * sizeof(float));
+    self->vaos[VAO_BASIC_TEXT] = vao2;
+
+    // Enable blending (for transparency)
+    GL_CALL(glEnable(GL_BLEND));
+    GL_CALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+
+    // MSAA Anti-aliasing
+    GL_CALL(glEnable(GL_MULTISAMPLE));
 
     // shaders
-    GLuint shader_program = shader_new("res/shaders/vertex.glsl", "res/shaders/fragment.glsl");
-    shader_use(shader_program);
+    self->current_shader_type = SHADER_NONE;
+    self->shaders[SHADER_BASIC_COLOR_TEX] = shader_new("res/shaders/basic_color_tex.vs", "res/shaders/basic_color_tex.fs");
+    self->shaders[SHADER_BASIC_TEXT] = shader_new("res/shaders/basic_text.vs", "res/shaders/basic_text.fs");
+    renderer_use_shader(self, SHADER_BASIC_COLOR_TEX);
 
-    r->window = window;
-    r->shaderProgram = shader_program;
-    
     return 0;
 }
 
-void renderer_clear_window(Renderer *r, Color3f color)
+void renderer_clear_window(Renderer *self, Color3i color)
 {
-    GL_CALL(glClearColor(color.r, color.g, color.b, 1.0));
+    GL_CALL(glClearColor(color.r / 255.0, color.g / 255.0, color.b / 255.0, 1.0));
     GL_CALL(glClear(GL_COLOR_BUFFER_BIT));
 }
 
-void renderer_draw_rect(Renderer *r, Color3i color, Vec2i pos, Vec2i size)
+void renderer_use_shader(Renderer *self, ShaderType type)
 {
-    int w = r->window->width;
-    int h = r->window->height;
+    if (self->current_shader_type == type)
+        return;
 
-    Vec2f topLeft = {((float)pos.x / w) * 2 - 1, ((float)pos.y / h) * 2 - 1}; // normalize position
-    Vec2f normalizedSize = {((float)size.x / w) * 2, ((float)size.y / h) * 2};
-    Color3f normalizedColor = {(float)color.r / 255, (float)color.g / 255, (float)color.b / 255};
+    self->current_shader_type = type;
+    self->current_shader = self->shaders[type];
+    shader_use(self->current_shader);
+}
 
-    Vertex vertices[] = {
-        {topLeft, normalizedColor, {0.0f, 0.0f}},
-        {{topLeft.x + normalizedSize.x, topLeft.y}, normalizedColor, {0.0f, 0.0f}},
-        {{topLeft.x + normalizedSize.x, topLeft.y - normalizedSize.y}, normalizedColor, {0.0f, 0.0f}},
-        {{topLeft.x, topLeft.y - normalizedSize.y}, normalizedColor, {0.0f, 0.0f}}};
+void renderer_use_vao(Renderer *self, VAOType type)
+{
+    vao_bind(self->vaos[type]);
+}
+
+void renderer_draw_rect(Renderer *self, Color3i color, Vec2i pos, Vec2i size)
+{
+    int w = self->window->width;
+    int h = self->window->height;
+
+    Vec2f top_left = {((float)pos.x / w) * 2 - 1, ((float)pos.y / h) * 2 - 1}; // normalize position
+    Vec2f normalized_size = {((float)size.x / w) * 2, ((float)size.y / h) * 2};
+    Color3f normalized_color = {(float)color.r / 255, (float)color.g / 255, (float)color.b / 255};
+
+    renderer_use_vao(self, VAO_BASIC_COLOR_TEX);
+    // position (vec2), color (vec3), texCoord (vec2)
+    float vertices[] = {
+        top_left.x, top_left.y,
+        normalized_color.r, normalized_color.g, normalized_color.b,
+        0.0f, 0.0f,
+
+        top_left.x + normalized_size.x, top_left.y,
+        normalized_color.r, normalized_color.g, normalized_color.b,
+        0.0f, 0.0f,
+
+        top_left.x + normalized_size.x, top_left.y - normalized_size.y,
+        normalized_color.r, normalized_color.g, normalized_color.b,
+        0.0f, 0.0f,
+
+        top_left.x, top_left.y - normalized_size.y,
+        normalized_color.r, normalized_color.g, normalized_color.b,
+        0.0f, 0.0f};
+
     GL_CALL(glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW));
 
     unsigned int indices[] = {
@@ -71,17 +114,143 @@ void renderer_draw_rect(Renderer *r, Color3i color, Vec2i pos, Vec2i size)
         2, 3, 0};
     GL_CALL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW));
 
+    renderer_use_shader(self, SHADER_BASIC_COLOR_TEX);
+    shader_uniform_int(self->current_shader, "useTexture", 0);
+
     GL_CALL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
 }
 
-void renderer_update(Renderer *r)
+void renderer_draw_rect_tex_colored(Renderer *self, Color3i color, Texture tex, Vec2i pos, Vec2i size)
 {
-    // TODO (Batch renderer?) 
+    int w = self->window->width;
+    int h = self->window->height;
+
+    Vec2f top_left = {((float)pos.x / w) * 2 - 1, ((float)pos.y / h) * 2 - 1}; // normalize position
+    Vec2f normalized_size = {((float)size.x / w) * 2, ((float)size.y / h) * 2};
+    Color3f normalized_color = {(float)color.r / 255, (float)color.g / 255, (float)color.b / 255};
+
+    renderer_use_vao(self, VAO_BASIC_COLOR_TEX);
+
+    // position (vec2), color (vec3), texCoord (vec2)
+    float vertices[] = {
+        top_left.x, top_left.y,
+        normalized_color.r, normalized_color.g, normalized_color.b,
+        0.0f, 1.0f,
+
+        top_left.x + normalized_size.x, top_left.y,
+        normalized_color.r, normalized_color.g, normalized_color.b,
+        1.0f, 1.0f,
+
+        top_left.x + normalized_size.x, top_left.y - normalized_size.y,
+        normalized_color.r, normalized_color.g, normalized_color.b,
+        1.0f, 0.0f,
+
+        top_left.x, top_left.y - normalized_size.y,
+        normalized_color.r, normalized_color.g, normalized_color.b,
+        0.0f, 0.0f};
+
+    GL_CALL(glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW));
+
+    unsigned int indices[] = {
+        0, 1, 2,
+        2, 3, 0};
+    GL_CALL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW));
+
+    texture_bind(tex, GL_TEXTURE0);
+
+    renderer_use_shader(self, SHADER_BASIC_COLOR_TEX);
+    shader_uniform_int(self->current_shader, "useTexture", 1);
+
+    GL_CALL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
+
+    texture_unbind(GL_TEXTURE0);
 }
 
-void renderer_terminate(Renderer *r)
+void renderer_draw_rect_tex(Renderer *self, Texture tex, Vec2i pos, Vec2i size)
 {
-    GL_CALL(glDeleteBuffers(1, &r->vertexBufferId));
-    GL_CALL(glDeleteBuffers(1, &r->indexBufferId));
-    GL_CALL(glDeleteVertexArrays(1, &r->vao));
+    renderer_draw_rect_tex_colored(self, (Color3i){255, 255, 255}, tex, pos, size);
+}
+
+void renderer_draw_text_scaled(Renderer *self, const char *text, Font *font, Vec2i pos, Vec2f scale, Color3i color)
+{
+    int w = self->window->width;
+    int h = self->window->height;
+
+    Color3f normalized_color = {(float)color.r / 255, (float)color.g / 255, (float)color.b / 255};
+
+    unsigned int height_from_baseline = get_height_from_baseline(font, text);
+    pos.y -= height_from_baseline * scale.y; // align to baseline
+
+    renderer_use_vao(self, VAO_BASIC_TEXT);
+
+    for (int i = 0; text[i] != '\0'; i++)
+    {
+        char c = text[i];
+        Glyph g = font->glyphs[(int)c];
+
+        Vec2i charPos;
+        charPos.x = pos.x + g.bearing.x * scale.x;
+        charPos.y = pos.y - (g.size.y - g.bearing.y) * scale.y;
+
+        Vec2i charSize = {g.size.x * scale.x, g.size.y * scale.y};
+
+        Vec2f normalized_origin = {((float)charPos.x / w) * 2 - 1, ((float)charPos.y / h) * 2 - 1}; // normalize position
+        Vec2f normalized_size = {((float)charSize.x / w) * 2, ((float)charSize.y / h) * 2};
+
+        float vertices[] = {
+            normalized_origin.x, normalized_origin.y, 0.0f, 1.0f,
+            normalized_origin.x + normalized_size.x, normalized_origin.y, 1.0f, 1.0f,
+            normalized_origin.x + normalized_size.x, normalized_origin.y + normalized_size.y, 1.0f, 0.0f,
+            normalized_origin.x, normalized_origin.y + normalized_size.y, 0.0f, 0.0f};
+        GL_CALL(glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW));
+
+        unsigned int indices[] = {
+            0, 1, 2,
+            2, 3, 0};
+        GL_CALL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW));
+
+        texture_bind(g.texture, GL_TEXTURE0);
+
+        renderer_use_shader(self, SHADER_BASIC_TEXT);
+        shader_uniform_vec3f(self->current_shader, "textColor", (Vec3f){normalized_color.r, normalized_color.g, normalized_color.b});
+
+        GL_CALL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
+
+        pos.x += (g.advance >> 6) * scale.x;
+    }
+}
+
+void renderer_draw_text(Renderer *self, const char *text, Font *font, Vec2i pos, Vec2i size, Color3i color)
+{
+    Vec2i text_dimensions = get_text_dimensions(font, text);
+    float x_scale = (float)size.x / text_dimensions.x;
+    float y_scale = (float)size.y / text_dimensions.y;
+
+    renderer_draw_text_scaled(self, text, font, pos, (Vec2f){x_scale, y_scale}, color);
+}
+
+void renderer_draw_text_with_width(Renderer *self, const char *text, Font *font, Vec2i pos, unsigned int width, Color3i color)
+{
+    Vec2i text_dimensions = get_text_dimensions(font, text);
+    float x_scale = (float)width / text_dimensions.x;
+    float y_scale = (float)width / text_dimensions.x;
+
+    renderer_draw_text_scaled(self, text, font, pos, (Vec2f){x_scale, y_scale}, color);
+}
+
+void renderer_update(Renderer *self)
+{
+    // TODO (Batch renderer?)
+}
+
+void renderer_terminate(Renderer *self)
+{
+    GL_CALL(glDeleteBuffers(1, &self->vbo));
+    GL_CALL(glDeleteBuffers(1, &self->ibo));
+
+    vao_delete(self->vaos[VAO_BASIC_COLOR_TEX]);
+    vao_delete(self->vaos[VAO_BASIC_TEXT]);
+
+    shader_delete(self->shaders[SHADER_BASIC_COLOR_TEX]);
+    shader_delete(self->shaders[SHADER_BASIC_TEXT]);
 }

@@ -1,15 +1,15 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -DGLEW_STATIC
+CFLAGS = -Wall -g -DGLEW_STATIC -DGLFW_INCLUDE_NONE
 
-LIB=-L./lib -static -lglew32 -lglfw3 -lcglm -lgdi32 -lopengl32
-INC=-I./include -I./src
+LIB=-L./lib -lglew32 -lglfw3 -lcglm -lfreetype -lgdi32 -lopengl32
+INC=-I./include -I./include/freetype -I./src
 
 SRC_DIR = src
 BUILD_DIR = build
 RES_DIR = res
 
 SOURCES = $(wildcard $(SRC_DIR)/*.c) $(wildcard $(SRC_DIR)/**/*.c)
-HEADERS = $(wildcard $(SRC_DIR)/*.h)
+HEADERS = $(wildcard $(SRC_DIR)/*.h) $(wildcard $(SRC_DIR)/**/*.h)
 OBJECTS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SOURCES))
 TARGET_EXEC = $(BUILD_DIR)/chess.exe
 

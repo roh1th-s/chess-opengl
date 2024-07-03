@@ -3,7 +3,7 @@
 
 #include "window.h"
 
-int window_init(Window *w, int width, int height, const char *title)
+int window_init(Window *self, int width, int height, const char *title)
 {
     if (!glfwInit())
     {
@@ -14,6 +14,7 @@ int window_init(Window *w, int width, int height, const char *title)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_SAMPLES, 4); // for MSAA
 
     GLFWwindow *glfwWindow = glfwCreateWindow(width, height, title, NULL, NULL);
 
@@ -23,10 +24,10 @@ int window_init(Window *w, int width, int height, const char *title)
         return -1;
     }
 
-    w->glfwWindow = glfwWindow;
-    w->height = height;
-    w->width = width;
-    w->title = title;
+    self->glfwWindow = glfwWindow;
+    self->height = height;
+    self->width = width;
+    self->title = title;
 
     glfwMakeContextCurrent(glfwWindow);
     glfwSwapInterval(1); // enable vsync
@@ -34,19 +35,19 @@ int window_init(Window *w, int width, int height, const char *title)
     return 0;
 }
 
-void window_update(Window *w)
+void window_update(Window *self)
 {
-    glfwSwapBuffers(w->glfwWindow);
+    glfwSwapBuffers(self->glfwWindow);
     glfwPollEvents();
 }
 
-int window_should_close(Window *w)
+int window_should_close(Window *self)
 {
-    return glfwWindowShouldClose(w->glfwWindow);
+    return glfwWindowShouldClose(self->glfwWindow);
 }
 
-void window_destroy(Window *w)
+void window_destroy(Window *self)
 {
-    glfwDestroyWindow(w->glfwWindow);
+    glfwDestroyWindow(self->glfwWindow);
     glfwTerminate();
 }

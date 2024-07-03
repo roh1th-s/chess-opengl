@@ -5,6 +5,7 @@
 
 #include "shader.h"
 #include "gl_error.h"
+#include "../types.h"
 
 static char *load_file(const char *path)
 {
@@ -28,7 +29,6 @@ static char *load_file(const char *path)
 
     return data;
 }
-
 
 static GLuint compile_shader(char *source, GLuint type)
 {
@@ -86,4 +86,18 @@ void shader_use(GLuint shader)
 void shader_delete(GLuint shader)
 {
     GL_CALL(glDeleteProgram(shader));
+}
+
+void shader_uniform_int(GLuint shader, const char *name, int value)
+{
+    GLint loc;
+    GL_CALL(loc = glGetUniformLocation(shader, name));
+    GL_CALL(glUniform1i(loc, value));
+}
+
+void shader_uniform_vec3f(GLuint shader, const char *name, Vec3f vec)
+{
+    GLint loc;
+    GL_CALL(loc = glGetUniformLocation(shader, name));
+    GL_CALL(glUniform3f(loc, vec.x, vec.y, vec.z));
 }

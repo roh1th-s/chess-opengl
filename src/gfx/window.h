@@ -9,9 +9,9 @@ typedef struct {
     GLFWwindow* glfwWindow;
 } Window;
 
-int window_init(Window* w, int width, int height, const char* title);
-void window_update(Window* w);
-int window_should_close(Window* w);
-void window_destroy(Window* w);
+int window_init(Window* self, int width, int height, const char* title);
+void window_update(Window* self);
+int window_should_close(Window* self);
+void window_destroy(Window* self);
 
 #endif
