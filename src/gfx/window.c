@@ -16,20 +16,20 @@ int window_init(Window *self, int width, int height, const char *title)
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_SAMPLES, 4); // for MSAA
 
-    GLFWwindow *glfwWindow = glfwCreateWindow(width, height, title, NULL, NULL);
+    GLFWwindow *glfw_window = glfwCreateWindow(width, height, title, NULL, NULL);
 
-    if (!glfwWindow)
+    if (!glfw_window)
     {
         printf("Error creating window!\n");
         return -1;
     }
 
-    self->glfwWindow = glfwWindow;
+    self->glfw_window = glfw_window;
     self->height = height;
     self->width = width;
     self->title = title;
 
-    glfwMakeContextCurrent(glfwWindow);
+    glfwMakeContextCurrent(glfw_window);
     glfwSwapInterval(1); // enable vsync
 
     return 0;
@@ -37,17 +37,17 @@ int window_init(Window *self, int width, int height, const char *title)
 
 void window_update(Window *self)
 {
-    glfwSwapBuffers(self->glfwWindow);
+    glfwSwapBuffers(self->glfw_window);
     glfwPollEvents();
 }
 
 int window_should_close(Window *self)
 {
-    return glfwWindowShouldClose(self->glfwWindow);
+    return glfwWindowShouldClose(self->glfw_window);
 }
 
 void window_destroy(Window *self)
 {
-    glfwDestroyWindow(self->glfwWindow);
+    glfwDestroyWindow(self->glfw_window);
     glfwTerminate();
 }

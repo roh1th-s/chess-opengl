@@ -6,7 +6,7 @@
 typedef struct {
     int width, height;
     const char* title;
-    GLFWwindow* glfwWindow;
+    GLFWwindow* glfw_window;
 } Window;
 
 int window_init(Window* self, int width, int height, const char* title);

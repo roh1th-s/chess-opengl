@@ -6,6 +6,7 @@
 #include "board.h"
 #include "../gfx/renderer.h"
 #include "../gfx/texture.h"
+#include "ui.h"
 
 typedef enum {
     MENU_STATE,
@@ -15,6 +16,7 @@ typedef enum {
 
 typedef struct {
     Renderer* renderer;
+    UIManager *ui;
     Texture board_texture;
     Font *primary_font;
 
