@@ -7,7 +7,7 @@
 #include "vao.h"
 #include "texture.h"
 #include "font.h"
-#include "types.h"
+#include "../types.h"
 
 typedef enum
 {

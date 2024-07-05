@@ -88,7 +88,7 @@ Vec2i get_text_dimensions(const Font *font, const char *text)
             continue;
         }
 
-        Glyph ch = font->glyphs[*c];
+        Glyph ch = font->glyphs[(int)*c];
         pen.x += ch.advance >> 6;
         dimensions.x = pen.x > dimensions.x ? pen.x : dimensions.x;
         dimensions.y = pen.y + ch.size.y > dimensions.y ? pen.y + ch.size.y : dimensions.y;
@@ -107,7 +107,7 @@ unsigned int get_height_from_baseline(const Font *font, const char* text) {
             continue;
         }
 
-        Glyph ch = font->glyphs[*c];
+        Glyph ch = font->glyphs[(int)*c];
         height = ch.bearing.y > height ? ch.bearing.y : height;
     }
 

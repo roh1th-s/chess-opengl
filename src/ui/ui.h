@@ -5,16 +5,19 @@
 
 #include "../gfx/renderer.h"
 
-typedef void (*Callback)(void *, ...);
+typedef struct UIComponent UIComponent;
+typedef struct UIManager UIManager;
+
+typedef void (*UIComponentCB)(UIComponent *, UIManager *);
 
 typedef enum
 {
     BUTTON,
 } UIComponentType;
 
-typedef struct
+typedef struct UIComponent
 {
-    Callback destroy, render, update;
+    UIComponentCB destroy, render, update;
     void *component;
     UIComponentType type;
     bool enabled;
@@ -22,14 +25,15 @@ typedef struct
 
 #define MAX_UI_COMPONENTS 10
 
-typedef struct {
+typedef struct 
+{
     bool left_button;
     bool right_button;
 
     Vec2f pos;
 } MouseState;
 
-typedef struct
+typedef struct UIManager
 {
     Renderer *renderer;
     UIComponent *components[MAX_UI_COMPONENTS];
@@ -40,7 +44,7 @@ typedef struct
 
 void ui_init(UIManager *self, Renderer *renderer);
 void ui_add_component(UIManager *self, UIComponent *component);
-void ui_destroy(UIManager *self);
+void ui_destroy_all(UIManager *self);
 void ui_render(UIManager *self);
 void ui_update(UIManager *self);
 

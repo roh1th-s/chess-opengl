@@ -1,3 +1,5 @@
+#include "GLFW/glfw3.h"
+
 #include "ui.h"
 
 void ui_init(UIManager *self, Renderer *r)
@@ -14,7 +16,7 @@ void ui_add_component(UIManager *self, UIComponent *component)
     }
 }
 
-void ui_destroy(UIManager *self)
+void ui_destroy_all(UIManager *self)
 {
     for (int i = 0; i < self->n_components; i++)
     {

@@ -4,36 +4,9 @@
 #include "../gfx/texture.h"
 #include "../gfx/window.h"
 #include "../types.h"
-#include "button.h"
-
-static void play_button_click(UIComponent *c) { printf("Start\n"); }
-
-void menu_state_init(ChessGame *game)
-{
-    Window *w = game->renderer->window;
-    int width = w->width;
-    int height = w->height;
-    UIComponent *button =
-        button_create(game->ui, (Vec2i){width / 2 - 100, height / 2 - 40}, (Vec2i){200, 90},
-                      (Padding){15, 10, 15, 10}, (Color3i){110, 38, 14}, "Play", game->primary_font);
-    Button *b = (Button *)button->component;
-    b->on_click = play_button_click;
-}
-
-void menu_state_render(ChessGame *game)
-{
-    Renderer *r = game->renderer;
-    Window *w = r->window;
-
-    int width = w->width;
-    int height = w->height;
-
-    int text_width = 500;
-    Vec2i center = {width / 2 - text_width / 2, height / 2 + 150};
-
-    renderer_draw_text_with_width(r, "Chess!", game->primary_font, center, text_width,
-                                  (Color3i){255, 255, 255});
-}
+#include "states/gameplay_state.h"
+#include "states/menu_state.h"
+#include "time.h"
 
 void game_init(ChessGame *self, Renderer *r)
 {
@@ -42,22 +15,30 @@ void game_init(ChessGame *self, Renderer *r)
     self->ui = (UIManager *)malloc(sizeof(UIManager));
     ui_init(self->ui, r);
 
-    Texture t;
-    texture_create(&t, "res/textures/board.png");
-    self->board_texture = t;
+    float startTime, endTime;
+    startTime = (float)clock() / CLOCKS_PER_SEC;
 
-    Font *inter = (Font *)malloc(sizeof(Font));
-    font_init(inter, "res/fonts/Inter-Regular.ttf", 200);
-    self->primary_font = inter;
+    LOAD_TEXTURE(self->board_texture, "res/textures/board.png");
+    LOAD_TEXTURE(self->bg_texture, "res/textures/walnut.jpg");
+    LOAD_TEXTURE(self->bg_texture2, "res/textures/bg.jpg");
 
-    self->state = MENU_STATE;
-    menu_state_init(self);
+    LOAD_FONT(self->primary_font, "res/fonts/Montserrat-SemiBold.ttf", 200);
+    LOAD_FONT(self->secondary_font, "res/fonts/Montserrat-Regular.ttf", 200);
+
+    endTime = (float)clock() / CLOCKS_PER_SEC;
+    printf("Loaded assets in %fs\n", endTime - startTime);
+
+    self->current_state = INIT_STATE;
+    self->states[MENU_STATE] = menu_state_init();
+    self->states[GAMEPLAY_STATE] = gameplay_state_init();
 }
 
 void game_start(ChessGame *self)
 {
     Renderer *r = self->renderer;
     Window *w = r->window;
+
+    game_switch_to_state(self, MENU_STATE);
 
     // game loop
     while (!window_should_close(w))
@@ -68,18 +49,21 @@ void game_start(ChessGame *self)
     }
 }
 
+void game_switch_to_state(ChessGame *self, GameStateType state)
+{
+    if (self->current_state == state)
+        return;
+
+    if (self->current_state != INIT_STATE)
+        self->states[self->current_state]->cleanup(self);
+
+    self->current_state = state;
+    self->states[state]->setup(self);
+}
+
 void game_update(ChessGame *self)
 {
-    switch (self->state)
-    {
-    case MENU_STATE:
-        break;
-    case LEVEL_SELECT_STATE:
-        break;
-    case GAMEPLAY_STATE:
-        break;
-    }
-
+    self->states[self->current_state]->update(self);
     ui_update(self->ui);
 }
 
@@ -88,16 +72,7 @@ void game_render(ChessGame *self)
     Renderer *r = self->renderer;
     Window *w = r->window;
 
-    switch (self->state)
-    {
-    case MENU_STATE:
-        menu_state_render(self);
-        break;
-    case LEVEL_SELECT_STATE:
-        break;
-    case GAMEPLAY_STATE:
-        break;
-    }
+    self->states[self->current_state]->render(self);
 
     ui_render(self->ui);
 
