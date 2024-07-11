@@ -6,15 +6,8 @@
 #include "../gfx/font.h"
 #include "../gfx/texture.h"
 #include "../types.h"
+#include "ui_types.h"
 #include "ui.h"
-
-typedef struct
-{
-    float top;
-    float right;
-    float bottom;
-    float left;
-} Padding;
 
 typedef void (*ButtonCB)(UIComponent *, void *);
 typedef struct

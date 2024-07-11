@@ -7,12 +7,13 @@
 #include "../gfx/texture.h"
 #include "../ui/ui.h"
 #include "board.h"
+#include "piece.h"
 
 #define LOAD_TEXTURE(var, path)                                                                              \
     {                                                                                                        \
         Texture tex;                                                                                         \
         texture_create(&tex, path);                                                                          \
-        var = tex;                                                                                        \
+        var = tex;                                                                                           \
     }
 
 #define LOAD_FONT(var, path, size)                                                                           \
@@ -23,6 +24,7 @@
     }
 
 typedef struct ChessGame ChessGame;
+
 typedef enum
 {
     INIT_STATE = -1,
@@ -31,6 +33,7 @@ typedef enum
 } GameStateType;
 
 typedef void (*GameStateCB)(ChessGame *);
+
 typedef struct
 {
     GameStateType type;
@@ -49,6 +52,9 @@ typedef struct ChessGame
     Texture board_texture;
     Texture bg_texture;
     Texture bg_texture2;
+    Texture piece_textures[12];
+    Texture player_icon_texture;
+
     Font *primary_font;
     Font *secondary_font;
 
@@ -56,6 +62,14 @@ typedef struct ChessGame
     GameState *states[2];
 
     ChessBoard board;
+    ChessColor player_color; // white = 1, black = 0
+    ChessColor current_turn;
+    Vec2i board_pos;
+    Vec2i board_size;
+    Vec2f mouse_pos;
+    bool mouse_down;
+    ChessPiece *selected_piece;
+    Vec2i selected_square;
 } ChessGame;
 
 void game_init(ChessGame *self, Renderer *r);

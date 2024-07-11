@@ -1,4 +1,4 @@
-#include "GLFW/glfw3.h"
+#include <GLFW/glfw3.h>
 
 #include "../gfx/font.h"
 #include "../gfx/renderer.h"
@@ -86,6 +86,10 @@ void button_render(UIComponent *self, UIManager *ui_manager)
                 (btn_size.x - (btn_padding.right + btn_padding.left) - textWidth) / 2;
         textY = btn_pos.y - btn_padding.top;
     }
+
+    textX = (textX - btn_pos.x) < 0 ? btn_pos.x : textX; // overflow
+    textY = (textY - btn_pos.y) < 0 ? btn_pos.y : textY;
+
     renderer_draw_text(renderer, button->text, button->font, (Vec2i){textX, textY},
                        (Vec2i){textWidth, textHeight}, (Color3i){255, 255, 255});
 }

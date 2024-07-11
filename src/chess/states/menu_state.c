@@ -1,11 +1,14 @@
 #include "menu_state.h"
-#include "../../ui/button.h"
-#include "../../ui/ui.h"
 #include "../../gfx/renderer.h"
+#include "../../ui/button.h"
+#include "../../ui/imagebox.h"
+#include "../../ui/textbox.h"
+#include "../../ui/ui.h"
 #include "../game.h"
 
-static void play_button_click(UIComponent *c, void *data) { 
-    printf("Start game\n"); 
+static void play_button_click(UIComponent *c, void *data)
+{
+    printf("Start game\n");
     ChessGame *game = (ChessGame *)data;
     game_switch_to_state(game, GAMEPLAY_STATE);
 }
@@ -28,33 +31,28 @@ void menu_state_setup(ChessGame *game)
     Window *w = game->renderer->window;
     int width = w->width;
     int height = w->height;
+    Vec2i center = {width / 2, height / 2};
+
+    // background
+    imagebox_create(game->ui, (Vec2i){0, height}, (Vec2i){width, height}, game->bg_texture,
+                    (Color3i){255, 255, 255});
+
+    // title text
+    Vec2i tb_size = {700, 140};
+    textbox_create(game->ui, (Vec2i){center.x - tb_size.x / 2, center.y + tb_size.y / 2 + 100}, tb_size,
+                   (Padding){0}, "Chess", game->primary_font);
+
+    // play button
+    Vec2i btn_size = {200, 90};
+    Color3i btn_color = {190, 190, 190};
     UIComponent *button = button_create_with_texture(
-        game->ui, (Vec2i){width / 2 - 100, height / 2 - 40}, (Vec2i){200, 90}, (Padding){18, 10, 18, 10},
-        (Color3i){190, 190, 190}, game->bg_texture2, "Play", game->secondary_font);
-    Button *b = (Button *)button->component;
+        game->ui, (Vec2i){center.x - btn_size.x / 2, center.y + btn_size.y / 2 - 85}, btn_size,
+        (Padding){18, 10, 18, 10}, btn_color, game->bg_texture2, "Play", game->secondary_font);
     button_set_on_click(button, play_button_click, game);
 }
 
-void menu_state_update(ChessGame *game)
-{
-    // nothing to update
-}
+void menu_state_update(ChessGame *game) {}
 
-void menu_state_render(ChessGame *game)
-{
-    Renderer *r = game->renderer;
-    Window *w = r->window;
-
-    int width = w->width;
-    int height = w->height;
-
-    int text_width = 500;
-    Vec2i center = {width / 2 - text_width / 2, height / 2 + 150};
-
-    renderer_draw_rect_tex(r, game->bg_texture, (Vec2i){0, height}, (Vec2i){width, height});
-
-    renderer_draw_text_with_width(r, "Chess", game->primary_font, center, text_width,
-                                  (Color3i){255, 255, 255});
-}
+void menu_state_render(ChessGame *game) {}
 
 void menu_state_cleanup(ChessGame *game) { ui_destroy_all(game->ui); }

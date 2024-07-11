@@ -5,7 +5,7 @@
 int main()
 {   
     Window w;
-    window_init(&w, 1280, 800, "Chess");
+    window_init(&w, 840, 800, "Chess");
 
     Renderer r;
     renderer_init(&r, &w);

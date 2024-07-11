@@ -1,5 +1,6 @@
 #include <GLFW/glfw3.h>
 #include <stdio.h>
+#include <windows.h>
 
 #include "window.h"
 
@@ -35,16 +36,11 @@ int window_init(Window *self, int width, int height, const char *title)
     return 0;
 }
 
-void window_update(Window *self)
-{
-    glfwSwapBuffers(self->glfw_window);
-    glfwPollEvents();
-}
+void window_poll_events() { glfwPollEvents(); }
 
-int window_should_close(Window *self)
-{
-    return glfwWindowShouldClose(self->glfw_window);
-}
+void window_swap_buffers(Window *self) { glfwSwapBuffers(self->glfw_window); }
+
+int window_should_close(Window *self) { return glfwWindowShouldClose(self->glfw_window); }
 
 void window_destroy(Window *self)
 {

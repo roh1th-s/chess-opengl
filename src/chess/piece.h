@@ -1,18 +1,25 @@
+#if !defined(CHESS_PIECE_H)
+#define CHESS_PIECE_H
+
 typedef enum {
-    PAWN,
-    KNIGHT,
-    BISHOP,
-    ROOK,
-    KING,
-    QUEEN,
+    PIECE_PAWN,
+    PIECE_KNIGHT,
+    PIECE_BISHOP,
+    PIECE_ROOK,
+    PIECE_KING,
+    PIECE_QUEEN,
 } PieceType;
 
 typedef enum {
-    BLACK,
+    BLACK = 0,
     WHITE
-} Color;
+} ChessColor;
 
 typedef struct {
     PieceType type;
-    Color color;
+    ChessColor color;
 } ChessPiece;
+
+ChessPiece *chess_piece_new(PieceType type, ChessColor color);
+
+#endif

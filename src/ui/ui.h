@@ -13,6 +13,8 @@ typedef void (*UIComponentCB)(UIComponent *, UIManager *);
 typedef enum
 {
     BUTTON,
+    TEXTBOX,
+    IMAGEBOX
 } UIComponentType;
 
 typedef struct UIComponent
@@ -23,7 +25,7 @@ typedef struct UIComponent
     bool enabled;
 } UIComponent;
 
-#define MAX_UI_COMPONENTS 10
+#define MAX_UI_COMPONENTS 20
 
 typedef struct 
 {
