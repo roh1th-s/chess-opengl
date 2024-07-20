@@ -1,5 +1,5 @@
-#include <stdlib.h>
 #include "piece.h"
+#include <stdlib.h>
 
 ChessPiece *chess_piece_new(PieceType type, ChessColor color)
 {
@@ -8,3 +8,5 @@ ChessPiece *chess_piece_new(PieceType type, ChessColor color)
     self->color = color;
     return self;
 }
+
+void chess_piece_delete(ChessPiece *self) { free(self); }

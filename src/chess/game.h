@@ -8,6 +8,7 @@
 #include "../ui/ui.h"
 #include "board.h"
 #include "piece.h"
+#include "movegen.h"
 
 #define LOAD_TEXTURE(var, path)                                                                              \
     {                                                                                                        \
@@ -64,6 +65,8 @@ typedef struct ChessGame
     ChessBoard board;
     ChessColor player_color; // white = 1, black = 0
     ChessColor current_turn;
+    MoveList current_move_list;
+
     Vec2i board_pos;
     Vec2i board_size;
     Vec2f mouse_pos;

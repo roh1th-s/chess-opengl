@@ -1,7 +1,8 @@
 #if !defined(CHESS_PIECE_H)
 #define CHESS_PIECE_H
 
-typedef enum {
+typedef enum
+{
     PIECE_PAWN,
     PIECE_KNIGHT,
     PIECE_BISHOP,
@@ -10,16 +11,19 @@ typedef enum {
     PIECE_QUEEN,
 } PieceType;
 
-typedef enum {
+typedef enum
+{
     BLACK = 0,
     WHITE
 } ChessColor;
 
-typedef struct {
+typedef struct
+{
     PieceType type;
     ChessColor color;
 } ChessPiece;
 
 ChessPiece *chess_piece_new(PieceType type, ChessColor color);
+void chess_piece_delete(ChessPiece *self);
 
 #endif

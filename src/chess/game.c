@@ -26,7 +26,7 @@ void game_init(ChessGame *self, Renderer *r)
     LOAD_TEXTURE(self->player_icon_texture, "res/textures/player.png");
 
     char colors[2] = {'w', 'b'};
-    char pieces[6] = {'p', 'r', 'n', 'b', 'q', 'k'};
+    char pieces[6] = {'p', 'n', 'b', 'r', 'k', 'q'};
     for (int i = 0; i < 2; i++)
     {
         for (int j = 0; j < 6; j++)
@@ -62,20 +62,26 @@ void game_start(ChessGame *self)
     // game loop
     while (!window_should_close(w))
     {
-        window_poll_events();
-
         currentTime = glfwGetTime();
         deltaTime = currentTime - lastTime;
+        lastTime = currentTime;
 
         game_update(self);
 
         game_render(self);
 
+        // char fps[10];
+        // sprintf(fps, "%.2f", 1.0 / deltaTime);
+        // renderer_draw_text(r, "FPS: ", self->secondary_font, (Vec2i){0, w->height}, (Vec2i){100, 30},
+        //                    (Color3i){255, 255, 255});
+        // renderer_draw_text(r, fps, self->secondary_font, (Vec2i){100, w->height}, (Vec2i){150, 30},
+        //                    (Color3i){255, 255, 255});
+
         window_swap_buffers(w);
 
-        Sleep(1);
+        window_poll_events();
 
-        lastTime = currentTime;
+        Sleep(1);
     }
 }
 
