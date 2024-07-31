@@ -55,18 +55,18 @@ void game_start(ChessGame *self)
 
     game_switch_to_state(self, MENU_STATE);
 
-    double lastTime = glfwGetTime();
-    double currentTime;
-    double deltaTime;
+    double last_time = glfwGetTime();
+    double current_time;
+    double delta_time;
 
     // game loop
     while (!window_should_close(w))
     {
-        currentTime = glfwGetTime();
-        deltaTime = currentTime - lastTime;
-        lastTime = currentTime;
+        current_time = glfwGetTime();
+        delta_time = current_time - last_time;
+        last_time = current_time;
 
-        game_update(self);
+        game_update(self, delta_time);
 
         game_render(self);
 
@@ -97,9 +97,9 @@ void game_switch_to_state(ChessGame *self, GameStateType state)
     self->states[state]->setup(self);
 }
 
-void game_update(ChessGame *self)
+void game_update(ChessGame *self, double delta_time)
 {
-    self->states[self->current_state]->update(self);
+    self->states[self->current_state]->update(self, delta_time);
     ui_update(self->ui);
 }
 

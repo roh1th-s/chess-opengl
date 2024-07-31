@@ -51,7 +51,7 @@ void menu_state_setup(ChessGame *game)
     button_set_on_click(button, play_button_click, game);
 }
 
-void menu_state_update(ChessGame *game) {}
+void menu_state_update(ChessGame *game, double delta_time) {}
 
 void menu_state_render(ChessGame *game) {}
 

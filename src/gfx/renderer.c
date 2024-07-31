@@ -17,6 +17,9 @@ int renderer_init(Renderer *self, Window *window)
         return -1;
     }
 
+    printf("Hardware: %s\n", glGetString(GL_RENDERER));
+    printf("OpenGL version: %s\n", glGetString(GL_VERSION));
+    
     self->window = window;
 
     // create buffers

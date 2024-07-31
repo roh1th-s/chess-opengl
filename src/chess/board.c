@@ -1,6 +1,7 @@
 #include <stddef.h>
 
 #include "board.h"
+#include "../types.h"
 
 void chess_board_init(ChessBoard* self) {
     // pawns
@@ -33,4 +34,9 @@ void chess_board_init(ChessBoard* self) {
             self->squares[i][j] = NULL;
         }
     }
+}
+
+void chess_board_move_piece(ChessBoard* self, ChessPiece* piece, Vec2i from, Vec2i to) {
+    self->squares[to.x][to.y] = piece;
+    self->squares[from.x][from.y] = NULL;
 }

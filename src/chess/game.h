@@ -7,8 +7,8 @@
 #include "../gfx/texture.h"
 #include "../ui/ui.h"
 #include "board.h"
-#include "piece.h"
 #include "movegen.h"
+#include "piece.h"
 
 #define LOAD_TEXTURE(var, path)                                                                              \
     {                                                                                                        \
@@ -34,13 +34,14 @@ typedef enum
 } GameStateType;
 
 typedef void (*GameStateCB)(ChessGame *);
+typedef void (*GameStateUpdateCB)(ChessGame *, double);
 
 typedef struct
 {
     GameStateType type;
 
     GameStateCB setup;
-    GameStateCB update;
+    GameStateUpdateCB update;
     GameStateCB render;
     GameStateCB cleanup;
 } GameState;
@@ -62,23 +63,33 @@ typedef struct ChessGame
     GameStateType current_state;
     GameState *states[2];
 
-    ChessBoard board;
-    ChessColor player_color; // white = 1, black = 0
-    ChessColor current_turn;
-    MoveList current_move_list;
+    struct ChessData
+    {
+        ChessBoard board;
+        ChessColor player_color; // white = 1, black = 0
+        ChessColor current_turn;
+        MoveList current_move_list;
+    } chess_data;
 
-    Vec2i board_pos;
-    Vec2i board_size;
-    Vec2f mouse_pos;
-    bool mouse_down;
-    ChessPiece *selected_piece;
-    Vec2i selected_square;
+    struct UIData
+    {
+        Vec2i board_pos;
+        Vec2i board_size;
+        Vec2f mouse_pos;
+        bool mouse_down;
+        ChessPiece *animating_piece;
+        Vec2i animating_from;
+        Vec2i animating_to;
+        float animation_time; 
+        ChessPiece *selected_piece;
+        Vec2i selected_square;
+    } ui_data;
 } ChessGame;
 
 void game_init(ChessGame *self, Renderer *r);
 void game_start(ChessGame *self);
 void game_switch_to_state(ChessGame *self, GameStateType state);
-void game_update(ChessGame *self);
+void game_update(ChessGame *self, double delta_time);
 void game_render(ChessGame *self);
 
 #endif
