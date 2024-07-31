@@ -6,7 +6,7 @@
 #include "button.h"
 #include "ui.h"
 
-UIComponent *button_create(UIManager *ui_manager, Vec2i pos, Vec2i size, Padding padding, Color3i color,
+UIComponent *button_create(UIManager *ui_manager, Vec2i pos, Vec2i size, Padding padding, Color4i color,
                            const char *text, Font *font)
 {
     UIComponent *self = (UIComponent *)malloc(sizeof(UIComponent));
@@ -35,7 +35,7 @@ UIComponent *button_create(UIManager *ui_manager, Vec2i pos, Vec2i size, Padding
 }
 
 UIComponent *button_create_with_texture(UIManager *ui_manager, Vec2i pos, Vec2i size, Padding padding,
-                                        Color3i color, Texture texture, const char *text, Font *font)
+                                        Color4i color, Texture texture, const char *text, Font *font)
 {
     UIComponent *self = button_create(ui_manager, pos, size, padding, color, text, font);
     Button *button = (Button *)self->component;
@@ -59,12 +59,13 @@ void button_render(UIComponent *self, UIManager *ui_manager)
 
     Vec2i btn_size = button->size;
     Vec2i btn_pos = button->position;
+    Color4i btn_color = button->color;
     Padding btn_padding = button->padding;
 
     if (button->use_texture)
-        renderer_draw_rect_tex_colored(renderer, button->color, button->texture, btn_pos, btn_size);
+        renderer_draw_rect_tex_colored(renderer, btn_color, button->texture, btn_pos, btn_size);
     else
-        renderer_draw_rect(renderer, button->color, btn_pos, btn_size);
+        renderer_draw_rect(renderer, btn_color, btn_pos, btn_size);
 
     // center text inside button
     Vec2i text_dim = get_text_dimensions(button->font, button->text);
@@ -91,7 +92,7 @@ void button_render(UIComponent *self, UIManager *ui_manager)
     textY = (textY - btn_pos.y) < 0 ? btn_pos.y : textY;
 
     renderer_draw_text(renderer, button->text, button->font, (Vec2i){textX, textY},
-                       (Vec2i){textWidth, textHeight}, (Color3i){255, 255, 255});
+                       (Vec2i){textWidth, textHeight}, (Color4i){255, 255, 255, 255});
 }
 
 void button_update(UIComponent *self, UIManager *ui_manager)

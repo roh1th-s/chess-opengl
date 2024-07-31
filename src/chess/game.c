@@ -24,7 +24,8 @@ void game_init(ChessGame *self, Renderer *r)
     LOAD_TEXTURE(self->bg_texture, "res/textures/walnut.jpg");
     LOAD_TEXTURE(self->bg_texture2, "res/textures/bg.jpg");
     LOAD_TEXTURE(self->player_icon_texture, "res/textures/player.png");
-
+    LOAD_TEXTURE(self->circle_texture, "res/textures/circle.png");
+    
     char colors[2] = {'w', 'b'};
     char pieces[6] = {'p', 'n', 'b', 'r', 'k', 'q'};
     for (int i = 0; i < 2; i++)
@@ -73,9 +74,9 @@ void game_start(ChessGame *self)
         // char fps[10];
         // sprintf(fps, "%.2f", 1.0 / deltaTime);
         // renderer_draw_text(r, "FPS: ", self->secondary_font, (Vec2i){0, w->height}, (Vec2i){100, 30},
-        //                    (Color3i){255, 255, 255});
+        //                    (Color3i){255, 255, 255, 255});
         // renderer_draw_text(r, fps, self->secondary_font, (Vec2i){100, w->height}, (Vec2i){150, 30},
-        //                    (Color3i){255, 255, 255});
+        //                    (Color3i){255, 255, 255, 255});
 
         window_swap_buffers(w);
 

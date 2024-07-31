@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 #include "movegen.h"
 
@@ -26,6 +27,8 @@ MoveList generate_moves(const ChessPiece *piece, Vec2i square, const ChessBoard 
         return generate_king_moves(piece, square, board);
         break;
     }
+
+    return (MoveList){NULL, 0};
 }
 
 MoveList generate_pawn_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board)
@@ -38,13 +41,30 @@ MoveList generate_pawn_moves(const ChessPiece *piece, Vec2i square, const ChessB
 
     int n_moves = 0;
 
-    if (board->squares[square.x][square.y + direction] == NULL)
+    ChessPiece *piece_on_target_square = board->squares[square.x][square.y + direction];
+    if (piece_on_target_square == NULL)
     {
         moves[n_moves++] = (ChessMove){square, {square.x, square.y + direction}};
 
         if (isOnStartingRank && board->squares[square.x][square.y + 2 * direction] == NULL)
         {
             moves[n_moves++] = (ChessMove){square, {square.x, square.y + 2 * direction}};
+        }
+    }
+
+    // diagonal captures
+    for (int i = -1; i <= 1; i += 2)
+    {
+        int x = square.x + i;
+        int y = square.y + direction;
+
+        if (x >= 0 && x < 8 && y >= 0 && y < 8)
+        {
+            ChessPiece *piece_on_diagonal_square = board->squares[x][y];
+            if (piece_on_diagonal_square != NULL && piece_on_diagonal_square->color != piece->color)
+            {
+                moves[n_moves++] = (ChessMove){square, {x, y}};
+            }
         }
     }
 
@@ -67,7 +87,8 @@ MoveList generate_knight_moves(const ChessPiece *piece, Vec2i square, const Ches
 
         if (x >= 0 && x < 8 && y >= 0 && y < 8)
         {
-            if (board->squares[x][y] == NULL)
+            ChessPiece *piece_on_target_square = board->squares[x][y];
+            if (piece_on_target_square == NULL || piece_on_target_square->color != piece->color)
             {
                 moves[n_moves++] = (ChessMove){square, {x, y}};
             }
@@ -91,11 +112,13 @@ MoveList generate_bishop_moves(const ChessPiece *piece, Vec2i square, const Ches
 
         while (x >= 0 && x < 8 && y >= 0 && y < 8)
         {
-            if (board->squares[x][y] == NULL)
+            ChessPiece *piece_on_target_square = board->squares[x][y];
+            if (piece_on_target_square == NULL || piece_on_target_square->color != piece->color)
             {
                 moves[n_moves++] = (ChessMove){square, {x, y}};
             }
-            else
+
+            if (piece_on_target_square)
             {
                 break;
             }
@@ -122,11 +145,13 @@ MoveList generate_rook_moves(const ChessPiece *piece, Vec2i square, const ChessB
 
         while (x >= 0 && x < 8 && y >= 0 && y < 8)
         {
-            if (board->squares[x][y] == NULL)
+            ChessPiece *piece_on_target_square = board->squares[x][y];
+            if (piece_on_target_square == NULL || piece_on_target_square->color != piece->color)
             {
                 moves[n_moves++] = (ChessMove){square, {x, y}};
             }
-            else
+
+            if (piece_on_target_square)
             {
                 break;
             }
@@ -153,11 +178,13 @@ MoveList generate_queen_moves(const ChessPiece *piece, Vec2i square, const Chess
 
         while (x >= 0 && x < 8 && y >= 0 && y < 8)
         {
-            if (board->squares[x][y] == NULL)
+            ChessPiece *piece_on_target_square = board->squares[x][y];
+            if (piece_on_target_square == NULL || piece_on_target_square->color != piece->color)
             {
                 moves[n_moves++] = (ChessMove){square, {x, y}};
             }
-            else
+
+            if (piece_on_target_square)
             {
                 break;
             }
@@ -184,7 +211,8 @@ MoveList generate_king_moves(const ChessPiece *piece, Vec2i square, const ChessB
 
         if (x >= 0 && x < 8 && y >= 0 && y < 8)
         {
-            if (board->squares[x][y] == NULL)
+            ChessPiece *piece_on_target_square = board->squares[x][y];
+            if (piece_on_target_square == NULL || piece_on_target_square->color != piece->color)
             {
                 moves[n_moves++] = (ChessMove){square, {x, y}};
             }

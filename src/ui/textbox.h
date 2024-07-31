@@ -12,12 +12,13 @@ typedef struct
 {
     Vec2i position;
     Vec2i size;
+    Color4i color;
     Padding padding;
     const char *text;
     Font *font;
 } Textbox;
 
-UIComponent *textbox_create(UIManager *ui_manager, Vec2i pos, Vec2i size, Padding padding, const char *text,
+UIComponent *textbox_create(UIManager *ui_manager, Vec2i pos, Vec2i size, Color4i color, Padding padding, const char *text,
                             Font *font);
 void textbox_render(UIComponent *self, UIManager *ui_manager);
 void textbox_update(UIComponent *self, UIManager *ui_manager);

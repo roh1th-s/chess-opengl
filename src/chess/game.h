@@ -56,6 +56,7 @@ typedef struct ChessGame
     Texture bg_texture2;
     Texture piece_textures[12];
     Texture player_icon_texture;
+    Texture circle_texture;
 
     Font *primary_font;
     Font *secondary_font;

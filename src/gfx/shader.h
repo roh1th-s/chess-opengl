@@ -11,5 +11,6 @@ void shader_delete(GLuint shader);
 
 void shader_uniform_int(GLuint shader, const char *name, int value);
 void shader_uniform_vec3f(GLuint shader, const char *name, Vec3f vec);
+void shader_uniform_vec4f(GLuint shader, const char *name, Vec4f vec);
 
 #endif // SHADER_H

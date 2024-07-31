@@ -40,11 +40,11 @@ void menu_state_setup(ChessGame *game)
     // title text
     Vec2i tb_size = {700, 140};
     textbox_create(game->ui, (Vec2i){center.x - tb_size.x / 2, center.y + tb_size.y / 2 + 100}, tb_size,
-                   (Padding){0}, "Chess", game->primary_font);
+                   (Color4i){255, 255, 255, 255}, (Padding){0}, "Chess", game->primary_font);
 
     // play button
     Vec2i btn_size = {200, 90};
-    Color3i btn_color = {190, 190, 190};
+    Color4i btn_color = {190, 190, 190, 255};
     UIComponent *button = button_create_with_texture(
         game->ui, (Vec2i){center.x - btn_size.x / 2, center.y + btn_size.y / 2 - 85}, btn_size,
         (Padding){18, 10, 18, 10}, btn_color, game->bg_texture2, "Play", game->secondary_font);

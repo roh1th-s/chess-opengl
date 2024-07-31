@@ -36,7 +36,8 @@ void imagebox_render(UIComponent *self, UIManager *ui_manager)
     Vec2i ib_size = imagebox->size;
     Vec2i ib_pos = imagebox->position;
 
-    renderer_draw_rect_tex_colored(renderer, imagebox->color, imagebox->texture, ib_pos, ib_size);
+    Color4i ib_color = {imagebox->color.r, imagebox->color.g, imagebox->color.b, 255};
+    renderer_draw_rect_tex_colored(renderer, ib_color, imagebox->texture, ib_pos, ib_size);
 }
 
 void imagebox_update(UIComponent *self, UIManager *ui_manager) {}

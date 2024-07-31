@@ -18,6 +18,13 @@ typedef struct {
 } Vec3f;
 
 typedef struct {
+    float x;
+    float y;
+    float z;
+    float w;
+} Vec4f;
+
+typedef struct {
     int r;
     int g;
     int b;
@@ -28,5 +35,19 @@ typedef struct {
     float g;
     float b;
 } Color3f;
+
+typedef struct {
+    int r;
+    int g;
+    int b;
+    int a;
+} Color4i;
+
+typedef struct {
+    float r;
+    float g;
+    float b;
+    float a;
+} Color4f;
 
 #endif

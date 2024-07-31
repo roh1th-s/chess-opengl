@@ -101,3 +101,10 @@ void shader_uniform_vec3f(GLuint shader, const char *name, Vec3f vec)
     GL_CALL(loc = glGetUniformLocation(shader, name));
     GL_CALL(glUniform3f(loc, vec.x, vec.y, vec.z));
 }
+
+void shader_uniform_vec4f(GLuint shader, const char *name, Vec4f vec)
+{
+    GLint loc;
+    GL_CALL(loc = glGetUniformLocation(shader, name));
+    GL_CALL(glUniform4f(loc, vec.x, vec.y, vec.z, vec.w));
+}

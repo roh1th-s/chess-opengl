@@ -10,7 +10,7 @@
 #include "../piece.h"
 #include "gameplay_state.h"
 
-#define PIECE_ANIMATION_DURATION 0.1
+#define PIECE_ANIMATION_DURATION 0.13
 
 static Vec2i calc_board_relative_pos(Vec2i board_top_left, Vec2i board_size, Vec2i square,
                                      ChessColor plr_color)
@@ -63,6 +63,8 @@ void gameplay_state_setup(ChessGame *game)
     chess_data->player_color = WHITE;
     chess_data->current_move_list = (MoveList){NULL, 0};
 
+    Color4i text_color = {255, 255, 255, 255};
+
     // background
     imagebox_create(game->ui, (Vec2i){0, height}, (Vec2i){width, height}, game->bg_texture,
                     (Color3i){255, 255, 255});
@@ -74,12 +76,12 @@ void gameplay_state_setup(ChessGame *game)
     // player icon
     imagebox_create(game->ui, (Vec2i){36, 52}, (Vec2i){45, 45}, game->player_icon_texture,
                     (Color3i){255, 255, 255});
-    textbox_create(game->ui, (Vec2i){81, 52}, (Vec2i){70, 15}, (Padding){0}, "You", game->secondary_font);
+    textbox_create(game->ui, (Vec2i){81, 52}, (Vec2i){70, 15}, text_color, (Padding){0}, "You", game->secondary_font);
 
     // opponent icon
     imagebox_create(game->ui, (Vec2i){661, 789}, (Vec2i){45, 45}, game->player_icon_texture,
                     (Color3i){255, 255, 255});
-    textbox_create(game->ui, (Vec2i){610, 789}, (Vec2i){50, 15}, (Padding){0}, "AI", game->secondary_font);
+    textbox_create(game->ui, (Vec2i){610, 789}, (Vec2i){50, 15},text_color, (Padding){0}, "AI", game->secondary_font);
 };
 
 void gameplay_state_update(ChessGame *game, double delta_time)
@@ -118,7 +120,35 @@ void gameplay_state_update(ChessGame *game, double delta_time)
             // mouse btn down
             ui_data->mouse_down = true;
 
-            if (chess_data->board.squares[x][y])
+            bool move_made = false;
+
+            if (ui_data->selected_piece)
+            {
+                for (int i = 0; i < chess_data->current_move_list.n_moves; i++)
+                {
+                    ChessMove move = chess_data->current_move_list.moves[i];
+                    if (move.to.x == x && move.to.y == y)
+                    {
+                        chess_board_move_piece(&chess_data->board, ui_data->selected_piece,
+                                               ui_data->selected_square, move.to);
+                        chess_data->current_turn = chess_data->current_turn == WHITE ? BLACK : WHITE;
+                        empty_move_list(game);
+
+                        // animate piece
+                        ui_data->animating_piece = ui_data->selected_piece;
+                        ui_data->animating_from = ui_data->selected_square;
+                        ui_data->animating_to = move.to;
+                        ui_data->animation_time = 0;
+
+                        move_made = true;
+                        break;
+                    }
+                }
+            }
+            ui_data->selected_square = (Vec2i){-1, -1};
+            ui_data->selected_piece = NULL;
+
+            if (!move_made && chess_data->board.squares[x][y])
             {
                 // clicked on a piece
                 ui_data->selected_square = (Vec2i){x, y};
@@ -126,40 +156,13 @@ void gameplay_state_update(ChessGame *game, double delta_time)
                 chess_data->current_move_list =
                     generate_moves(ui_data->selected_piece, (Vec2i){x, y}, &chess_data->board);
             }
-            else
-            {
-                if (ui_data->selected_piece)
-                {
-                    for (int i = 0; i < chess_data->current_move_list.n_moves; i++)
-                    {
-                        ChessMove move = chess_data->current_move_list.moves[i];
-                        if (move.to.x == x && move.to.y == y)
-                        {
-                            chess_board_move_piece(&chess_data->board, ui_data->selected_piece,
-                                                   ui_data->selected_square, move.to);
-                            chess_data->current_turn = chess_data->current_turn == WHITE ? BLACK : WHITE;
-                            empty_move_list(game);
-
-                            // animate piece
-                            ui_data->animating_piece = ui_data->selected_piece;
-                            ui_data->animating_from = ui_data->selected_square;
-                            ui_data->animating_to = move.to;
-                            ui_data->animation_time = 0;
-
-                            break;
-                        }
-                    }
-                }
-                ui_data->selected_square = (Vec2i){-1, -1};
-                ui_data->selected_piece = NULL;
-            }
         }
         else if (ui_data->mouse_down && !left_btn_pressed)
         {
             // clicked and released
             ui_data->mouse_down = false;
 
-            if (ui_data->selected_piece && !chess_data->board.squares[x][y])
+            if (ui_data->selected_piece)
             {
                 // move piece
                 for (int i = 0; i < chess_data->current_move_list.n_moves; i++)
@@ -232,8 +235,36 @@ void gameplay_state_render(ChessGame *game)
         Vec2i square_pos =
             calc_board_relative_pos(board_pos, board_size, ui_data->selected_square, plr_color);
 
-        renderer_draw_rect(r, (Color3i){255, 0, 0}, square_pos,
+        renderer_draw_rect(r, (Color4i){255, 210, 111, 225}, square_pos,
                            (Vec2i){ceil(square_size.x), ceil(square_size.y)});
+    }
+
+    ChessPiece *selected_piece = ui_data->selected_piece;
+
+    // selected piece moves
+    if (selected_piece && chess_data->current_move_list.n_moves > 0)
+    {
+        for (int i = 0; i < chess_data->current_move_list.n_moves; i++)
+        {
+            ChessMove move = chess_data->current_move_list.moves[i];
+            bool is_capture = chess_data->board.squares[move.to.x][move.to.y] != NULL;
+
+            Vec2i square_pos = calc_board_relative_pos(board_pos, board_size, move.to, plr_color);
+            Vec2i circle_size = (Vec2i){ceil(square_size.x * 0.3), ceil(square_size.y * 0.3)};
+            Vec2i circle_pos = (Vec2i){square_pos.x + square_size.x / 2 - circle_size.x / 2,
+                                       square_pos.y - square_size.y / 2 + circle_size.y / 2};
+
+            if (is_capture)
+            {
+                renderer_draw_rect(r, (Color4i){255, 0, 0, 240}, square_pos,
+                                   (Vec2i){ceil(square_size.x), ceil(square_size.y)});
+            }
+            else
+            {
+                renderer_draw_rect_tex_colored(r, (Color4i){16, 16, 16, 50}, game->circle_texture, circle_pos,
+                                               circle_size);
+            }
+        }
     }
 
     // pieces
@@ -256,29 +287,15 @@ void gameplay_state_render(ChessGame *game)
         }
     }
 
-    ChessPiece *selected_piece = ui_data->selected_piece;
-
-    // selected piece moves
-    if (selected_piece && chess_data->current_move_list.n_moves > 0)
-    {
-        for (int i = 0; i < chess_data->current_move_list.n_moves; i++)
-        {
-            ChessMove move = chess_data->current_move_list.moves[i];
-            Vec2i square_pos = calc_board_relative_pos(board_pos, board_size, move.to, plr_color);
-
-            renderer_draw_rect(r, (Color3i){0, 255, 0}, square_pos,
-                               (Vec2i){ceil(square_size.x), ceil(square_size.y)});
-        }
-    }
-
     // currently moving piece
     if (ui_data->animating_piece)
     {
         Vec2i from = calc_board_relative_pos(board_pos, board_size, ui_data->animating_from, plr_color);
         Vec2i to = calc_board_relative_pos(board_pos, board_size, ui_data->animating_to, plr_color);
 
-        Vec2i piece_pos = (Vec2i){from.x + (to.x - from.x) * ui_data->animation_time / PIECE_ANIMATION_DURATION,
-                                  from.y + (to.y - from.y) * ui_data->animation_time / PIECE_ANIMATION_DURATION};
+        Vec2i piece_pos =
+            (Vec2i){from.x + (to.x - from.x) * ui_data->animation_time / PIECE_ANIMATION_DURATION,
+                    from.y + (to.y - from.y) * ui_data->animation_time / PIECE_ANIMATION_DURATION};
 
         Texture tex = game->piece_textures[ui_data->animating_piece->type +
                                            (ui_data->animating_piece->color == BLACK ? 6 : 0)];

@@ -15,7 +15,7 @@ typedef struct
     Vec2i position;
     Vec2i size;
     Padding padding;
-    Color3i color;
+    Color4i color;
     Texture texture;
     bool use_texture;
     const char *text;
@@ -28,10 +28,10 @@ typedef struct
     ButtonCB on_click;
 } Button;
 
-UIComponent *button_create(UIManager *ui_manager, Vec2i pos, Vec2i size, Padding padding, Color3i color,
+UIComponent *button_create(UIManager *ui_manager, Vec2i pos, Vec2i size, Padding padding, Color4i color,
                            const char *text, Font *font);
 UIComponent *button_create_with_texture(UIManager *ui_manager, Vec2i pos, Vec2i size, Padding padding,
-                                        Color3i color, Texture texture, const char *text, Font *font);
+                                        Color4i color, Texture texture, const char *text, Font *font);
 void button_set_on_click(UIComponent *self, ButtonCB on_click, void *data);
 void button_render(UIComponent *self, UIManager *ui_manager);
 void button_update(UIComponent *self, UIManager *ui_manager);

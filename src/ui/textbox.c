@@ -5,7 +5,7 @@
 #include "textbox.h"
 #include "ui.h"
 
-UIComponent *textbox_create(UIManager *ui_manager, Vec2i pos, Vec2i size, Padding padding, const char *text,
+UIComponent *textbox_create(UIManager *ui_manager, Vec2i pos, Vec2i size, Color4i color, Padding padding, const char *text,
                             Font *font)
 {
     UIComponent *self = (UIComponent *)malloc(sizeof(UIComponent));
@@ -13,6 +13,7 @@ UIComponent *textbox_create(UIManager *ui_manager, Vec2i pos, Vec2i size, Paddin
     Textbox *textbox = (Textbox *)malloc(sizeof(Textbox));
     textbox->position = pos;
     textbox->size = size;
+    textbox->color = color;
     textbox->padding = padding;
     textbox->text = text;
     textbox->font = font;
@@ -67,7 +68,7 @@ void textbox_render(UIComponent *self, UIManager *ui_manager)
     textY = (textY - tb_pos.y) < 0 ? tb_pos.y : textY;
 
     renderer_draw_text(renderer, textbox->text, textbox->font, (Vec2i){textX, textY},
-                       (Vec2i){textWidth, textHeight}, (Color3i){255, 255, 255});
+                       (Vec2i){textWidth, textHeight}, textbox->color);
 }
 
 void textbox_update(UIComponent *self, UIManager *ui_manager) {}

@@ -1,11 +1,13 @@
 #include <stddef.h>
 
-#include "board.h"
 #include "../types.h"
+#include "board.h"
 
-void chess_board_init(ChessBoard* self) {
+void chess_board_init(ChessBoard *self)
+{
     // pawns
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++)
+    {
         self->squares[i][1] = chess_piece_new(PIECE_PAWN, WHITE);
         self->squares[i][6] = chess_piece_new(PIECE_PAWN, BLACK);
     }
@@ -29,14 +31,27 @@ void chess_board_init(ChessBoard* self) {
     self->squares[7][7] = chess_piece_new(PIECE_ROOK, BLACK);
 
     // empty squares
-    for (int i = 0; i < 8; i++) {
-        for (int j = 2; j < 6; j++) {
+    for (int i = 0; i < 8; i++)
+    {
+        for (int j = 2; j < 6; j++)
+        {
             self->squares[i][j] = NULL;
         }
     }
 }
 
-void chess_board_move_piece(ChessBoard* self, ChessPiece* piece, Vec2i from, Vec2i to) {
+void chess_board_move_piece(ChessBoard *self, ChessPiece *piece, Vec2i from, Vec2i to)
+{
+
+    ChessPiece *piece_on_target_square = self->squares[to.x][to.y];
+
+    // capture
+    if (piece_on_target_square != NULL)
+    {
+        chess_piece_delete(piece_on_target_square);
+        self->squares[to.x][to.y] = NULL;
+    }
+
     self->squares[to.x][to.y] = piece;
     self->squares[from.x][from.y] = NULL;
 }
