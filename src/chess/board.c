@@ -1,7 +1,9 @@
 #include <stddef.h>
+#include <stdlib.h>
 
 #include "../types.h"
 #include "board.h"
+#include "movegen.h"
 
 void chess_board_init(ChessBoard *self)
 {
@@ -38,10 +40,14 @@ void chess_board_init(ChessBoard *self)
             self->squares[i][j] = NULL;
         }
     }
+
+    self->last_move = NULL;
 }
 
-void chess_board_move_piece(ChessBoard *self, ChessPiece *piece, Vec2i from, Vec2i to)
+void chess_board_make_move(ChessBoard *self, ChessPiece *piece, ChessMove *move)
 {
+    Vec2i from = move->from;
+    Vec2i to = move->to;
 
     ChessPiece *piece_on_target_square = self->squares[to.x][to.y];
 
@@ -49,9 +55,31 @@ void chess_board_move_piece(ChessBoard *self, ChessPiece *piece, Vec2i from, Vec
     if (piece_on_target_square != NULL)
     {
         chess_piece_delete(piece_on_target_square);
-        self->squares[to.x][to.y] = NULL;
+    }
+
+    if (move->type == EN_PASSANT)
+    {
+        chess_piece_delete(self->squares[to.x][from.y]);
+        self->squares[to.x][from.y] = NULL;
     }
 
     self->squares[to.x][to.y] = piece;
     self->squares[from.x][from.y] = NULL;
+
+    if (self->last_move != NULL)
+    {
+        free(self->last_move);
+    }
+
+    self->last_move = malloc(sizeof(ChessMove));
+    *self->last_move = *move;
+}
+
+void chess_board_promote_pawn(ChessBoard *self, ChessPiece *pawn, struct ChessMove *move,
+                              PieceType promoted_type)
+{
+    chess_board_make_move(self, pawn, move);
+
+    Vec2i to = move->to;
+    self->squares[to.x][to.y]->type = promoted_type;
 }

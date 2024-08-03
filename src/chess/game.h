@@ -54,6 +54,7 @@ typedef struct ChessGame
     Texture board_texture;
     Texture bg_texture;
     Texture bg_texture2;
+    Texture menu_bg_texture;
     Texture piece_textures[12];
     Texture player_icon_texture;
     Texture circle_texture;
@@ -81,9 +82,13 @@ typedef struct ChessGame
         ChessPiece *animating_piece;
         Vec2i animating_from;
         Vec2i animating_to;
-        float animation_time; 
+        float animation_time;
         ChessPiece *selected_piece;
         Vec2i selected_square;
+        bool promotion_menu_open;
+        ChessMove *pending_promotion_move;
+        Vec2i promotion_menu_pos;
+        Vec2i promotion_menu_size;
     } ui_data;
 } ChessGame;
 

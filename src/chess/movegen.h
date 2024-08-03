@@ -12,9 +12,17 @@
 #define MAX_QUEEN_MOVES 27
 #define MAX_KING_MOVES 8
 
-typedef struct {
+typedef struct ChessMove {
     Vec2i from;
     Vec2i to;
+
+    enum MoveType {
+        NORMAL,
+        CASTLE_KINGSIDE,
+        CASTLE_QUEENSIDE,
+        EN_PASSANT,
+        PROMOTION
+    } type;
 } ChessMove;
 
 typedef struct {

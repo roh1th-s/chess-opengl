@@ -35,18 +35,21 @@ MoveList generate_pawn_moves(const ChessPiece *piece, Vec2i square, const ChessB
 {
     ChessMove *moves = malloc(MAX_PAWN_MOVES * sizeof(ChessMove));
 
-    bool isWhite = piece->color == WHITE;
-    int direction = isWhite ? 1 : -1;
-    bool isOnStartingRank = isWhite ? square.y == 1 : square.y == 6;
+    bool is_white = piece->color == WHITE;
+    int direction = is_white ? 1 : -1;
+    bool is_on_starting_rank = is_white ? square.y == 1 : square.y == 6;
+    bool is_on_promotion_rank = is_white ? square.y == 6 : square.y == 1;
 
     int n_moves = 0;
 
     ChessPiece *piece_on_target_square = board->squares[square.x][square.y + direction];
     if (piece_on_target_square == NULL)
     {
-        moves[n_moves++] = (ChessMove){square, {square.x, square.y + direction}};
+        moves[n_moves++] =
+            (ChessMove){square, {square.x, square.y + direction}, is_on_promotion_rank ? PROMOTION : NORMAL};
 
-        if (isOnStartingRank && board->squares[square.x][square.y + 2 * direction] == NULL)
+        // double push
+        if (is_on_starting_rank && board->squares[square.x][square.y + 2 * direction] == NULL)
         {
             moves[n_moves++] = (ChessMove){square, {square.x, square.y + 2 * direction}};
         }
@@ -63,12 +66,31 @@ MoveList generate_pawn_moves(const ChessPiece *piece, Vec2i square, const ChessB
             ChessPiece *piece_on_diagonal_square = board->squares[x][y];
             if (piece_on_diagonal_square != NULL && piece_on_diagonal_square->color != piece->color)
             {
-                moves[n_moves++] = (ChessMove){square, {x, y}};
+                moves[n_moves++] = (ChessMove){square, {x, y}, is_on_promotion_rank ? PROMOTION : NORMAL};
             }
         }
     }
 
-    // TODO: en passant & promotion
+    // en passant
+    if (board->last_move != NULL)
+    {
+        Vec2i last_move_to = board->last_move->to;
+        bool is_on_en_passant_rank = is_white ? square.y == 4 : square.y == 3;
+
+        if (is_on_en_passant_rank)
+        {
+            bool last_move_was_pawn = board->squares[last_move_to.x][last_move_to.y]->type == PIECE_PAWN;
+            bool last_move_was_double_push = abs(last_move_to.y - board->last_move->from.y) == 2;
+            bool last_move_was_adjacent = abs(last_move_to.x - square.x) == 1;
+
+            if (last_move_was_pawn && last_move_was_double_push && last_move_was_adjacent)
+            {
+                int x = last_move_to.x;
+                int y = last_move_to.y + (is_white ? 1 : -1);
+                moves[n_moves++] = (ChessMove){square, {x, y}, EN_PASSANT};
+            }
+        }
+    }
 
     return (MoveList){moves, n_moves};
 }

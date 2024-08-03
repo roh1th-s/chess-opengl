@@ -23,6 +23,7 @@ void game_init(ChessGame *self, Renderer *r)
     LOAD_TEXTURE(self->board_texture, "res/textures/board.png");
     LOAD_TEXTURE(self->bg_texture, "res/textures/walnut.jpg");
     LOAD_TEXTURE(self->bg_texture2, "res/textures/bg.jpg");
+    LOAD_TEXTURE(self->menu_bg_texture, "res/textures/menu_bg.png");
     LOAD_TEXTURE(self->player_icon_texture, "res/textures/player.png");
     LOAD_TEXTURE(self->circle_texture, "res/textures/circle.png");
     
