@@ -4,7 +4,7 @@
 
 #include "movegen.h"
 
-MoveList generate_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board)
+MoveList generate_pseudo_legal_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board)
 {
     switch (piece->type)
     {
@@ -29,6 +29,69 @@ MoveList generate_moves(const ChessPiece *piece, Vec2i square, const ChessBoard 
     }
 
     return (MoveList){NULL, 0};
+}
+
+MoveList generate_legal_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board)
+{
+    MoveList pseudo_legal_moves = generate_pseudo_legal_moves(piece, square, board);
+    ChessMove *legal_moves = malloc(pseudo_legal_moves.n_moves * sizeof(ChessMove));
+    int n_legal_moves = 0;
+
+    for (int i = 0; i < pseudo_legal_moves.n_moves; i++)
+    {
+        ChessMove *move = &pseudo_legal_moves.moves[i];
+        
+        ChessMove *last_move = NULL;
+        if (board->last_move != NULL)
+        {   
+            // make a copy of the last move to restore it after testing the move
+            last_move = malloc(sizeof(ChessMove));
+            *last_move = *board->last_move;
+        }
+
+        if (move->type == PROMOTION)
+        {
+            PieceType types_to_check[] = {PIECE_QUEEN, PIECE_KNIGHT};
+            bool is_legal = true;
+
+            for (int j = 0; j < 2; j++)
+            {
+                chess_board_promote_pawn(board, piece, move, types_to_check[j]);
+
+                if (chess_board_is_in_check(board, piece->color))
+                {
+                    is_legal = false;
+                }
+
+                chess_board_undo_last_move(board, last_move);
+
+                if (!is_legal)
+                {
+                    break;
+                }
+            }
+
+            if (is_legal)
+            {
+                legal_moves[n_legal_moves++] = *move;
+            }
+        }
+        else
+        {
+            chess_board_make_move(board, piece, move);
+
+            if (!chess_board_is_in_check(board, piece->color))
+            {
+                legal_moves[n_legal_moves++] = *move;
+            }
+
+            chess_board_undo_last_move(board, last_move);
+        }
+    }
+
+    free(pseudo_legal_moves.moves);
+
+    return (MoveList){legal_moves, n_legal_moves};
 }
 
 MoveList generate_pawn_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board)
@@ -66,7 +129,11 @@ MoveList generate_pawn_moves(const ChessPiece *piece, Vec2i square, const ChessB
             ChessPiece *piece_on_diagonal_square = board->squares[x][y];
             if (piece_on_diagonal_square != NULL && piece_on_diagonal_square->color != piece->color)
             {
-                moves[n_moves++] = (ChessMove){square, {x, y}, is_on_promotion_rank ? PROMOTION : NORMAL};
+                moves[n_moves++] = (ChessMove){square,
+                                               {x, y},
+                                               is_on_promotion_rank ? PROMOTION : NORMAL,
+                                               true,
+                                               piece_on_diagonal_square->type};
             }
         }
     }
@@ -87,7 +154,7 @@ MoveList generate_pawn_moves(const ChessPiece *piece, Vec2i square, const ChessB
             {
                 int x = last_move_to.x;
                 int y = last_move_to.y + (is_white ? 1 : -1);
-                moves[n_moves++] = (ChessMove){square, {x, y}, EN_PASSANT};
+                moves[n_moves++] = (ChessMove){square, {x, y}, EN_PASSANT, true, PIECE_PAWN};
             }
         }
     }
@@ -112,7 +179,9 @@ MoveList generate_knight_moves(const ChessPiece *piece, Vec2i square, const Ches
             ChessPiece *piece_on_target_square = board->squares[x][y];
             if (piece_on_target_square == NULL || piece_on_target_square->color != piece->color)
             {
-                moves[n_moves++] = (ChessMove){square, {x, y}};
+                bool is_capture = piece_on_target_square != NULL;
+                moves[n_moves++] = (ChessMove){
+                    square, {x, y}, NORMAL, is_capture, is_capture ? piece_on_target_square->type : 0};
             }
         }
     }
@@ -137,7 +206,9 @@ MoveList generate_bishop_moves(const ChessPiece *piece, Vec2i square, const Ches
             ChessPiece *piece_on_target_square = board->squares[x][y];
             if (piece_on_target_square == NULL || piece_on_target_square->color != piece->color)
             {
-                moves[n_moves++] = (ChessMove){square, {x, y}};
+                bool is_capture = piece_on_target_square != NULL;
+                moves[n_moves++] = (ChessMove){
+                    square, {x, y}, NORMAL, is_capture, is_capture ? piece_on_target_square->type : 0};
             }
 
             if (piece_on_target_square)
@@ -170,7 +241,9 @@ MoveList generate_rook_moves(const ChessPiece *piece, Vec2i square, const ChessB
             ChessPiece *piece_on_target_square = board->squares[x][y];
             if (piece_on_target_square == NULL || piece_on_target_square->color != piece->color)
             {
-                moves[n_moves++] = (ChessMove){square, {x, y}};
+                bool is_capture = piece_on_target_square != NULL;
+                moves[n_moves++] = (ChessMove){
+                    square, {x, y}, NORMAL, is_capture, is_capture ? piece_on_target_square->type : 0};
             }
 
             if (piece_on_target_square)
@@ -203,7 +276,9 @@ MoveList generate_queen_moves(const ChessPiece *piece, Vec2i square, const Chess
             ChessPiece *piece_on_target_square = board->squares[x][y];
             if (piece_on_target_square == NULL || piece_on_target_square->color != piece->color)
             {
-                moves[n_moves++] = (ChessMove){square, {x, y}};
+                bool is_capture = piece_on_target_square != NULL;
+                moves[n_moves++] = (ChessMove){
+                    square, {x, y}, NORMAL, is_capture, is_capture ? piece_on_target_square->type : 0};
             }
 
             if (piece_on_target_square)
@@ -236,7 +311,9 @@ MoveList generate_king_moves(const ChessPiece *piece, Vec2i square, const ChessB
             ChessPiece *piece_on_target_square = board->squares[x][y];
             if (piece_on_target_square == NULL || piece_on_target_square->color != piece->color)
             {
-                moves[n_moves++] = (ChessMove){square, {x, y}};
+                bool is_capture = piece_on_target_square != NULL;
+                moves[n_moves++] = (ChessMove){
+                    square, {x, y}, NORMAL, is_capture, is_capture ? piece_on_target_square->type : 0};
             }
         }
     }

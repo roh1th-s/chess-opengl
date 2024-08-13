@@ -27,6 +27,37 @@ static void empty_move_list(ChessGame *game)
     chess_data->current_move_list = (MoveList){NULL, 0};
 }
 
+static void check_chess_state(ChessGame *game)
+{
+    struct ChessData *chess_data = &game->chess_data;
+    // check
+    if (chess_board_is_in_check(&chess_data->board, chess_data->current_turn))
+    {
+        if (chess_board_is_in_checkmate(&chess_data->board, chess_data->current_turn, false))
+        {
+            // checkmate
+            printf("Checkmate\n");
+        }
+        else
+        {
+            // check
+            chess_data->is_in_check = true;
+            printf("Check\n");
+        }
+    }
+    else
+    {
+        if (chess_data->is_in_check)
+            chess_data->is_in_check = false;
+
+        if (chess_board_is_in_stalemate(&chess_data->board, chess_data->current_turn, false))
+        {
+            // stalemate
+            printf("Stalemate\n");
+        }
+    }
+}
+
 GameState *gameplay_state_init()
 {
     GameState *self = (GameState *)malloc(sizeof(GameState));
@@ -68,6 +99,7 @@ void gameplay_state_setup(ChessGame *game)
     chess_data->current_turn = WHITE;
     chess_data->player_color = WHITE;
     chess_data->current_move_list = (MoveList){NULL, 0};
+    chess_data->is_in_check = false;
 
     Color4i text_color = {255, 255, 255, 255};
 
@@ -125,6 +157,7 @@ void gameplay_state_update(ChessGame *game, double delta_time)
 
             ChessMove *move = ui_data->pending_promotion_move;
             chess_board_promote_pawn(&chess_data->board, ui_data->selected_piece, move, promoted_type);
+            check_chess_state(game);
 
             chess_data->current_turn = chess_data->current_turn == WHITE ? BLACK : WHITE;
             empty_move_list(game);
@@ -172,6 +205,8 @@ void gameplay_state_update(ChessGame *game, double delta_time)
                         {
                             chess_board_make_move(&chess_data->board, ui_data->selected_piece, move);
                             chess_data->current_turn = chess_data->current_turn == WHITE ? BLACK : WHITE;
+                            check_chess_state(game);
+
                             empty_move_list(game);
 
                             // animate piece
@@ -179,10 +214,9 @@ void gameplay_state_update(ChessGame *game, double delta_time)
                             ui_data->animating_from = ui_data->selected_square;
                             ui_data->animating_to = move->to;
                             ui_data->animation_time = 0;
-
-                            move_made = true;
                         }
 
+                        move_made = true;
                         break;
                     }
                 }
@@ -190,13 +224,14 @@ void gameplay_state_update(ChessGame *game, double delta_time)
             ui_data->selected_square = (Vec2i){-1, -1};
             ui_data->selected_piece = NULL;
 
-            if (!move_made && chess_data->board.squares[x][y])
+            if (!move_made && chess_data->board.squares[x][y] &&
+                chess_data->board.squares[x][y]->color == chess_data->current_turn)
             {
                 // clicked on a piece
                 ui_data->selected_square = (Vec2i){x, y};
                 ui_data->selected_piece = chess_data->board.squares[x][y];
                 chess_data->current_move_list =
-                    generate_moves(ui_data->selected_piece, (Vec2i){x, y}, &chess_data->board);
+                    generate_legal_moves(ui_data->selected_piece, (Vec2i){x, y}, &chess_data->board);
             }
         }
         else if (ui_data->mouse_down && !left_btn_pressed)
@@ -221,6 +256,8 @@ void gameplay_state_update(ChessGame *game, double delta_time)
                         {
                             chess_board_make_move(&chess_data->board, ui_data->selected_piece, move);
                             chess_data->current_turn = chess_data->current_turn == WHITE ? BLACK : WHITE;
+                            check_chess_state(game);
+
                             empty_move_list(game);
                             ui_data->selected_square = (Vec2i){-1, -1};
                             ui_data->selected_piece = NULL;
@@ -290,6 +327,17 @@ void gameplay_state_render(ChessGame *game)
     }
 
     ChessPiece *selected_piece = ui_data->selected_piece;
+
+    // check indicator
+    if (chess_data->is_in_check)
+    {
+        Vec2i king_pos = chess_data->current_turn == WHITE ? chess_data->board.white_king_pos
+                                                           : chess_data->board.black_king_pos;
+        Vec2i square_pos = calc_board_relative_pos(board_pos, board_size, king_pos, plr_color);
+
+        renderer_draw_rect(r, (Color4i){255, 40, 40, 255}, square_pos,
+                           (Vec2i){ceil(square_size.x), ceil(square_size.y)});
+    }
 
     // selected piece moves
     if (selected_piece && chess_data->current_move_list.n_moves > 0)
@@ -374,7 +422,7 @@ void gameplay_state_render(ChessGame *game)
 
         PieceType promotions[] = {PIECE_QUEEN, PIECE_ROOK, PIECE_BISHOP, PIECE_KNIGHT};
         for (int i = 0; i < 4; i++)
-        {   
+        {
             int piece_tex_idx = promotions[i];
             Vec2i pos = (Vec2i){menu_pos.x + i * square_size.x, menu_pos.y - 3};
             Texture tex = game->piece_textures[piece_tex_idx + (plr_color == BLACK ? 6 : 0)];

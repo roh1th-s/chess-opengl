@@ -71,6 +71,7 @@ typedef struct ChessGame
         ChessColor player_color; // white = 1, black = 0
         ChessColor current_turn;
         MoveList current_move_list;
+        bool is_in_check;
     } chess_data;
 
     struct UIData

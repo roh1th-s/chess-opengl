@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -g -DGLEW_STATIC -DGLFW_INCLUDE_NONE
 
 LIB=-L./lib -lglew32 -lglfw3 -lcglm -lfreetype -lgdi32 -lopengl32
-INC=-I./include -I./include/freetype -I./src
+INC=-I./include -I./include/freetype
 
 SRC_DIR = src
 BUILD_DIR = build
