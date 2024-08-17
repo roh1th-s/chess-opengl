@@ -33,6 +33,7 @@ void chess_board_promote_pawn(ChessBoard *self, ChessPiece *pawn, struct ChessMo
                               PieceType promoted_type);
 void chess_board_undo_last_move(ChessBoard *self, struct ChessMove *prev_last_move);
 bool chess_board_is_square_attacked(ChessBoard *self, Vec2i square, ChessColor color);
+bool chess_board_does_side_have_legal_moves(ChessBoard *self, ChessColor color);
 bool chess_board_is_in_check(ChessBoard *self, ChessColor color);
 bool chess_board_is_in_checkmate(ChessBoard *self, ChessColor color, bool do_check_detection);
 bool chess_board_is_in_stalemate(ChessBoard *self, ChessColor color, bool do_check_detection);

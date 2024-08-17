@@ -4,12 +4,13 @@
 
 #include "movegen.h"
 
-MoveList generate_pseudo_legal_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board)
+MoveList generate_pseudo_legal_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board,
+                                     bool only_attacking)
 {
     switch (piece->type)
     {
     case PIECE_PAWN:
-        return generate_pawn_moves(piece, square, board);
+        return generate_pawn_moves(piece, square, board, only_attacking);
         break;
     case PIECE_KNIGHT:
         return generate_knight_moves(piece, square, board);
@@ -24,7 +25,7 @@ MoveList generate_pseudo_legal_moves(const ChessPiece *piece, Vec2i square, cons
         return generate_queen_moves(piece, square, board);
         break;
     case PIECE_KING:
-        return generate_king_moves(piece, square, board);
+        return generate_king_moves(piece, square, board, only_attacking);
         break;
     }
 
@@ -33,17 +34,17 @@ MoveList generate_pseudo_legal_moves(const ChessPiece *piece, Vec2i square, cons
 
 MoveList generate_legal_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board)
 {
-    MoveList pseudo_legal_moves = generate_pseudo_legal_moves(piece, square, board);
+    MoveList pseudo_legal_moves = generate_pseudo_legal_moves(piece, square, board, false);
     ChessMove *legal_moves = malloc(pseudo_legal_moves.n_moves * sizeof(ChessMove));
     int n_legal_moves = 0;
 
     for (int i = 0; i < pseudo_legal_moves.n_moves; i++)
     {
         ChessMove *move = &pseudo_legal_moves.moves[i];
-        
+
         ChessMove *last_move = NULL;
         if (board->last_move != NULL)
-        {   
+        {
             // make a copy of the last move to restore it after testing the move
             last_move = malloc(sizeof(ChessMove));
             *last_move = *board->last_move;
@@ -94,7 +95,8 @@ MoveList generate_legal_moves(const ChessPiece *piece, Vec2i square, const Chess
     return (MoveList){legal_moves, n_legal_moves};
 }
 
-MoveList generate_pawn_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board)
+MoveList generate_pawn_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board,
+                             bool only_attacking)
 {
     ChessMove *moves = malloc(MAX_PAWN_MOVES * sizeof(ChessMove));
 
@@ -106,7 +108,7 @@ MoveList generate_pawn_moves(const ChessPiece *piece, Vec2i square, const ChessB
     int n_moves = 0;
 
     ChessPiece *piece_on_target_square = board->squares[square.x][square.y + direction];
-    if (piece_on_target_square == NULL)
+    if (piece_on_target_square == NULL && !only_attacking)
     {
         moves[n_moves++] =
             (ChessMove){square, {square.x, square.y + direction}, is_on_promotion_rank ? PROMOTION : NORMAL};
@@ -127,13 +129,16 @@ MoveList generate_pawn_moves(const ChessPiece *piece, Vec2i square, const ChessB
         if (x >= 0 && x < 8 && y >= 0 && y < 8)
         {
             ChessPiece *piece_on_diagonal_square = board->squares[x][y];
-            if (piece_on_diagonal_square != NULL && piece_on_diagonal_square->color != piece->color)
+
+            // if attacking moves are requested, return diagonal moves irrespective of the piece on the square
+            if (only_attacking ||
+                (piece_on_diagonal_square != NULL && piece_on_diagonal_square->color != piece->color))
             {
                 moves[n_moves++] = (ChessMove){square,
                                                {x, y},
                                                is_on_promotion_rank ? PROMOTION : NORMAL,
                                                true,
-                                               piece_on_diagonal_square->type};
+                                               only_attacking ? 0 : piece_on_diagonal_square->type};
             }
         }
     }
@@ -231,6 +236,14 @@ MoveList generate_rook_moves(const ChessPiece *piece, Vec2i square, const ChessB
     int n_moves = 0;
     int directions[4][2] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
 
+    bool is_queen_side_rook = square.x == 0 && (square.y == 0 || square.y == 7);
+    bool is_king_side_rook = square.x == 7 && (square.y == 0 || square.y == 7);
+    bool does_move_remove_castling_rights =
+        piece->color == WHITE ? (is_king_side_rook && board->castling_rights.white_king_side) ||
+                                    (is_queen_side_rook && board->castling_rights.white_queen_side)
+                              : (is_king_side_rook && board->castling_rights.black_king_side) ||
+                                    (is_queen_side_rook && board->castling_rights.black_queen_side);
+
     for (int i = 0; i < 4; i++)
     {
         int x = square.x + directions[i][0];
@@ -242,8 +255,12 @@ MoveList generate_rook_moves(const ChessPiece *piece, Vec2i square, const ChessB
             if (piece_on_target_square == NULL || piece_on_target_square->color != piece->color)
             {
                 bool is_capture = piece_on_target_square != NULL;
-                moves[n_moves++] = (ChessMove){
-                    square, {x, y}, NORMAL, is_capture, is_capture ? piece_on_target_square->type : 0};
+                moves[n_moves++] = (ChessMove){square,
+                                               {x, y},
+                                               NORMAL,
+                                               is_capture,
+                                               is_capture ? piece_on_target_square->type : 0,
+                                               does_move_remove_castling_rights};
             }
 
             if (piece_on_target_square)
@@ -294,12 +311,18 @@ MoveList generate_queen_moves(const ChessPiece *piece, Vec2i square, const Chess
     return (MoveList){moves, n_moves};
 }
 
-MoveList generate_king_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board)
+MoveList generate_king_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board,
+                             bool only_attacking)
 {
     ChessMove *moves = malloc(MAX_KING_MOVES * sizeof(ChessMove));
 
     int n_moves = 0;
     int directions[8][2] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}, {1, 1}, {1, -1}, {-1, -1}, {-1, 1}};
+
+    bool does_move_remove_castling_rights =
+        piece->color == WHITE
+            ? board->castling_rights.white_king_side || board->castling_rights.white_queen_side
+            : board->castling_rights.black_king_side || board->castling_rights.black_queen_side;
 
     for (int i = 0; i < 8; i++)
     {
@@ -312,13 +335,70 @@ MoveList generate_king_moves(const ChessPiece *piece, Vec2i square, const ChessB
             if (piece_on_target_square == NULL || piece_on_target_square->color != piece->color)
             {
                 bool is_capture = piece_on_target_square != NULL;
-                moves[n_moves++] = (ChessMove){
-                    square, {x, y}, NORMAL, is_capture, is_capture ? piece_on_target_square->type : 0};
+                moves[n_moves++] = (ChessMove){square,
+                                               {x, y},
+                                               NORMAL,
+                                               is_capture,
+                                               is_capture ? piece_on_target_square->type : 0,
+                                               does_move_remove_castling_rights};
             }
         }
     }
 
-    // TODO: castling
+    // castling
+    if (!only_attacking)
+    {
+
+        bool is_check = chess_board_is_square_attacked(board, square, piece->color);
+        bool king_side_allowed = piece->color == WHITE ? board->castling_rights.white_king_side
+                                                       : board->castling_rights.black_king_side;
+        bool queen_side_allowed = piece->color == WHITE ? board->castling_rights.white_queen_side
+                                                        : board->castling_rights.black_queen_side;
+
+        // king side
+        if (!is_check && king_side_allowed)
+        {
+            Vec2i squares_to_check[] = {{5, square.y}, {6, square.y}};
+            for (int i = 0; i < 2; i++)
+            {
+                if (board->squares[squares_to_check[i].x][squares_to_check[i].y] != NULL)
+                {
+                    // square is occupied
+                    break;
+                }
+                if (chess_board_is_square_attacked(board, squares_to_check[i], piece->color))
+                {
+                    break;
+                }
+                if (i == 1)
+                {
+                    moves[n_moves++] = (ChessMove){square, {6, square.y}, CASTLE_KINGSIDE, false, 0, true};
+                }
+            }
+        }
+
+        // queen side
+        if (!is_check && queen_side_allowed)
+        {
+            Vec2i squares_to_check[] = {{1, square.y}, {2, square.y}, {3, square.y}};
+            for (int i = 0; i < 2; i++)
+            {
+                if (board->squares[squares_to_check[i].x][squares_to_check[i].y] != NULL)
+                {
+                    // square is occupied
+                    break;
+                }
+                if (chess_board_is_square_attacked(board, squares_to_check[i], piece->color))
+                {
+                    break;
+                }
+                if (i == 1)
+                {
+                    moves[n_moves++] = (ChessMove){square, {2, square.y}, CASTLE_QUEENSIDE, false, 0, true};
+                }
+            }
+        }
+    }
 
     return (MoveList){moves, n_moves};
 }

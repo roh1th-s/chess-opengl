@@ -28,6 +28,7 @@ typedef struct ChessMove
 
     bool is_capture;
     PieceType captured_type;
+    bool removes_castling_rights;
 } ChessMove;
 
 typedef struct
@@ -36,13 +37,13 @@ typedef struct
     int n_moves;
 } MoveList;
 
-MoveList generate_pseudo_legal_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board);
+MoveList generate_pseudo_legal_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board, bool only_attacking);
 MoveList generate_legal_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board);
-MoveList generate_pawn_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board);
+MoveList generate_pawn_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board, bool only_attacking);
 MoveList generate_knight_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board);
 MoveList generate_bishop_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board);
 MoveList generate_rook_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board);
 MoveList generate_queen_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board);
-MoveList generate_king_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board);
+MoveList generate_king_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board, bool only_attacking);
 
 #endif

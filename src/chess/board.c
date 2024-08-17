@@ -61,10 +61,36 @@ void chess_board_make_move(ChessBoard *self, ChessPiece *piece, ChessMove *move)
         chess_piece_delete(piece_on_target_square);
     }
 
-    if (move->type == EN_PASSANT)
+    switch (move->type)
     {
+    case EN_PASSANT:
         chess_piece_delete(self->squares[to.x][from.y]);
         self->squares[to.x][from.y] = NULL;
+        break;
+    case CASTLE_KINGSIDE:
+        if (piece->color == WHITE)
+        {
+            self->squares[5][0] = self->squares[7][0];
+            self->squares[7][0] = NULL;
+        }
+        else
+        {
+            self->squares[5][7] = self->squares[7][7];
+            self->squares[7][7] = NULL;
+        }
+        break;
+    case CASTLE_QUEENSIDE:
+        if (piece->color == WHITE)
+        {
+            self->squares[3][0] = self->squares[0][0];
+            self->squares[0][0] = NULL;
+        }
+        else
+        {
+            self->squares[3][7] = self->squares[0][7];
+            self->squares[0][7] = NULL;
+        }
+        break;
     }
 
     self->squares[to.x][to.y] = piece;
@@ -79,6 +105,36 @@ void chess_board_make_move(ChessBoard *self, ChessPiece *piece, ChessMove *move)
         else
         {
             self->black_king_pos = to;
+        }
+    }
+
+    if (move->removes_castling_rights)
+    {
+        bool is_king_side_rook = from.x == 7;
+        bool is_queen_side_rook = from.x == 0;
+        bool is_king = piece->type == PIECE_KING;
+
+        if (piece->color == WHITE)
+        {
+            if (is_king_side_rook || is_king)
+            {
+                self->castling_rights.white_king_side = 0;
+            }
+            if (is_queen_side_rook || is_king)
+            {
+                self->castling_rights.white_queen_side = 0;
+            }
+        }
+        else
+        {
+            if (is_king_side_rook || is_king)
+            {
+                self->castling_rights.black_king_side = 0;
+            }
+            if (is_queen_side_rook || is_king)
+            {
+                self->castling_rights.black_queen_side = 0;
+            }
         }
     }
 
@@ -108,23 +164,28 @@ void chess_board_undo_last_move(ChessBoard *self, ChessMove *prev_last_move)
 
     ChessPiece *moved_piece = self->squares[to.x][to.y];
 
-    if (last_move->type == EN_PASSANT)
+    switch (last_move->type)
     {
+    case EN_PASSANT:
         self->squares[to.x][from.y] = chess_piece_new(PIECE_PAWN, !self->squares[to.x][to.y]->color);
-        self->squares[from.x][from.y] = moved_piece;
-        self->squares[to.x][to.y] = NULL;
+        break;
+    case CASTLE_KINGSIDE:
+        self->squares[7][from.y] = self->squares[5][from.y];
+        self->squares[5][from.y] = NULL;
+        break;
+    case CASTLE_QUEENSIDE:
+        self->squares[0][from.y] = self->squares[3][from.y];
+        self->squares[3][from.y] = NULL;
+        break;
+    case PROMOTION:
+        moved_piece->type = PIECE_PAWN; // make it a pawn again
+        break;
     }
-    else
-    {
-        self->squares[from.x][from.y] = moved_piece;
-        self->squares[to.x][to.y] =
-            last_move->is_capture ? chess_piece_new(last_move->captured_type, !moved_piece->color) : NULL;
 
-        if (last_move->type == PROMOTION)
-        {
-            moved_piece->type = PIECE_PAWN; // make it a pawn again
-        }
-    }
+    self->squares[from.x][from.y] = moved_piece;
+    self->squares[to.x][to.y] = last_move->is_capture && last_move->type != EN_PASSANT
+                                    ? chess_piece_new(last_move->captured_type, !moved_piece->color)
+                                    : NULL;
 
     if (moved_piece->type == PIECE_KING)
     {
@@ -138,6 +199,47 @@ void chess_board_undo_last_move(ChessBoard *self, ChessMove *prev_last_move)
         }
     }
 
+    // restore castling rights
+    if (last_move->removes_castling_rights)
+    {
+        bool is_king_side_rook = from.x == 7;
+        bool is_queen_side_rook = from.x == 0;
+        bool is_king = moved_piece->type == PIECE_KING;
+
+        if (moved_piece->color == WHITE)
+        {
+            if (is_king_side_rook)
+            {
+                self->castling_rights.white_king_side = 1;
+            }
+            else if (is_queen_side_rook)
+            {
+                self->castling_rights.white_queen_side = 1;
+            }
+            else if (is_king)
+            {
+                self->castling_rights.white_king_side = 1;
+                self->castling_rights.white_queen_side = 1;
+            }
+        }
+        else
+        {
+            if (is_king_side_rook)
+            {
+                self->castling_rights.black_king_side = 1;
+            }
+            else if (is_queen_side_rook)
+            {
+                self->castling_rights.black_queen_side = 1;
+            }
+            else if (is_king)
+            {
+                self->castling_rights.black_king_side = 1;
+                self->castling_rights.black_queen_side = 1;
+            }
+        }
+    }
+
     if (self->last_move != NULL)
     {
         free(self->last_move);
@@ -148,6 +250,8 @@ void chess_board_undo_last_move(ChessBoard *self, ChessMove *prev_last_move)
 
 bool chess_board_is_square_attacked(ChessBoard *self, Vec2i square, ChessColor color)
 {
+    // TODO: optimize this
+
     for (int i = 0; i < 8; i++)
     {
         for (int j = 0; j < 8; j++)
@@ -155,7 +259,7 @@ bool chess_board_is_square_attacked(ChessBoard *self, Vec2i square, ChessColor c
             ChessPiece *piece = self->squares[i][j];
             if (piece != NULL && piece->color != color)
             {
-                MoveList move_list = generate_pseudo_legal_moves(piece, (Vec2i){i, j}, self);
+                MoveList move_list = generate_pseudo_legal_moves(piece, (Vec2i){i, j}, self, true);
                 for (int k = 0; k < move_list.n_moves; k++)
                 {
                     if (move_list.moves[k].to.x == square.x && move_list.moves[k].to.y == square.y)
@@ -176,13 +280,8 @@ bool chess_board_is_in_check(ChessBoard *self, ChessColor color)
     return chess_board_is_square_attacked(self, king_pos, color);
 }
 
-bool chess_board_is_in_checkmate(ChessBoard *self, ChessColor color, bool do_check_detection)
+bool chess_board_does_side_have_legal_moves(ChessBoard *self, ChessColor color)
 {
-    if (do_check_detection && !chess_board_is_in_check(self, color))
-    {
-        return false;
-    }
-
     for (int i = 0; i < 8; i++)
     {
         for (int j = 0; j < 8; j++)
@@ -194,12 +293,22 @@ bool chess_board_is_in_checkmate(ChessBoard *self, ChessColor color, bool do_che
                 if (move_list.n_moves > 0)
                 {
                     free(move_list.moves);
-                    return false;
+                    return true;
                 }
             }
         }
     }
-    return true;
+    return false;
+}
+
+bool chess_board_is_in_checkmate(ChessBoard *self, ChessColor color, bool do_check_detection)
+{
+    if (do_check_detection && !chess_board_is_in_check(self, color))
+    {
+        return false;
+    }
+
+    return !chess_board_does_side_have_legal_moves(self, color);
 }
 
 bool chess_board_is_in_stalemate(ChessBoard *self, ChessColor color, bool do_check_detection)
@@ -209,21 +318,5 @@ bool chess_board_is_in_stalemate(ChessBoard *self, ChessColor color, bool do_che
         return false;
     }
 
-    for (int i = 0; i < 8; i++)
-    {
-        for (int j = 0; j < 8; j++)
-        {
-            ChessPiece *piece = self->squares[i][j];
-            if (piece != NULL && piece->color == color)
-            {
-                MoveList move_list = generate_legal_moves(piece, (Vec2i){i, j}, self);
-                if (move_list.n_moves > 0)
-                {
-                    free(move_list.moves);
-                    return false;
-                }
-            }
-        }
-    }
-    return true;
+    return !chess_board_does_side_have_legal_moves(self, color);
 }

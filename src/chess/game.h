@@ -10,6 +10,8 @@
 #include "movegen.h"
 #include "piece.h"
 
+#define MAX_PIECE_ANIMATIONS 2
+
 #define LOAD_TEXTURE(var, path)                                                                              \
     {                                                                                                        \
         Texture tex;                                                                                         \
@@ -80,10 +82,15 @@ typedef struct ChessGame
         Vec2i board_size;
         Vec2f mouse_pos;
         bool mouse_down;
-        ChessPiece *animating_piece;
-        Vec2i animating_from;
-        Vec2i animating_to;
-        float animation_time;
+
+        struct
+        {
+            ChessPiece *animating_piece;
+            Vec2i animating_from;
+            Vec2i animating_to;
+            float animation_time;
+        } piece_animations[MAX_PIECE_ANIMATIONS];
+
         ChessPiece *selected_piece;
         Vec2i selected_square;
         bool promotion_menu_open;
