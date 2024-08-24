@@ -108,33 +108,24 @@ void chess_board_make_move(ChessBoard *self, ChessPiece *piece, ChessMove *move)
         }
     }
 
-    if (move->removes_castling_rights)
+    CastlingRightsRemoved removed_rights = move->castling_rights_removed;
+    if (removed_rights != CASTLING_RIGHT_NONE)
     {
-        bool is_king_side_rook = from.x == 7;
-        bool is_queen_side_rook = from.x == 0;
-        bool is_king = piece->type == PIECE_KING;
-
-        if (piece->color == WHITE)
+        if (removed_rights == CASTLING_RIGHT_KINGSIDE)
         {
-            if (is_king_side_rook || is_king)
-            {
-                self->castling_rights.white_king_side = 0;
-            }
-            if (is_queen_side_rook || is_king)
-            {
-                self->castling_rights.white_queen_side = 0;
-            }
+            piece->color == WHITE ? (self->castling_rights.white_king_side = 0)
+                                  : (self->castling_rights.black_king_side = 0);
         }
-        else
+        else if (removed_rights == CASTLING_RIGHT_QUEENSIDE)
         {
-            if (is_king_side_rook || is_king)
-            {
-                self->castling_rights.black_king_side = 0;
-            }
-            if (is_queen_side_rook || is_king)
-            {
-                self->castling_rights.black_queen_side = 0;
-            }
+            piece->color == WHITE ? (self->castling_rights.white_queen_side = 0)
+                                  : (self->castling_rights.black_queen_side = 0);
+        }
+        else if (removed_rights == CASTLING_RIGHT_BOTH)
+        {
+            piece->color == WHITE
+                ? (self->castling_rights.white_king_side = 0, self->castling_rights.white_queen_side = 0)
+                : (self->castling_rights.black_king_side = 0, self->castling_rights.black_queen_side = 0);
         }
     }
 
@@ -200,43 +191,24 @@ void chess_board_undo_last_move(ChessBoard *self, ChessMove *prev_last_move)
     }
 
     // restore castling rights
-    if (last_move->removes_castling_rights)
+    CastlingRightsRemoved removed_rights = last_move->castling_rights_removed;
+    if (removed_rights != CASTLING_RIGHT_NONE)
     {
-        bool is_king_side_rook = from.x == 7;
-        bool is_queen_side_rook = from.x == 0;
-        bool is_king = moved_piece->type == PIECE_KING;
-
-        if (moved_piece->color == WHITE)
+        if (removed_rights == CASTLING_RIGHT_KINGSIDE)
         {
-            if (is_king_side_rook)
-            {
-                self->castling_rights.white_king_side = 1;
-            }
-            else if (is_queen_side_rook)
-            {
-                self->castling_rights.white_queen_side = 1;
-            }
-            else if (is_king)
-            {
-                self->castling_rights.white_king_side = 1;
-                self->castling_rights.white_queen_side = 1;
-            }
+            moved_piece->color == WHITE ? (self->castling_rights.white_king_side = 1)
+                                        : (self->castling_rights.black_king_side = 1);
         }
-        else
+        else if (removed_rights == CASTLING_RIGHT_QUEENSIDE)
         {
-            if (is_king_side_rook)
-            {
-                self->castling_rights.black_king_side = 1;
-            }
-            else if (is_queen_side_rook)
-            {
-                self->castling_rights.black_queen_side = 1;
-            }
-            else if (is_king)
-            {
-                self->castling_rights.black_king_side = 1;
-                self->castling_rights.black_queen_side = 1;
-            }
+            moved_piece->color == WHITE ? (self->castling_rights.white_queen_side = 1)
+                                        : (self->castling_rights.black_queen_side = 1);
+        }
+        else if (removed_rights == CASTLING_RIGHT_BOTH)
+        {
+            moved_piece->color == WHITE
+                ? (self->castling_rights.white_king_side = 1, self->castling_rights.white_queen_side = 1)
+                : (self->castling_rights.black_king_side = 1, self->castling_rights.black_queen_side = 1);
         }
     }
 

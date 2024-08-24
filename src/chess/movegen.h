@@ -12,6 +12,14 @@
 #define MAX_QUEEN_MOVES 27
 #define MAX_KING_MOVES 8
 
+typedef enum CastlingRightsRemoved
+{
+    CASTLING_RIGHT_NONE,
+    CASTLING_RIGHT_KINGSIDE,
+    CASTLING_RIGHT_QUEENSIDE,
+    CASTLING_RIGHT_BOTH
+} CastlingRightsRemoved;
+
 typedef struct ChessMove
 {
     Vec2i from;
@@ -28,7 +36,7 @@ typedef struct ChessMove
 
     bool is_capture;
     PieceType captured_type;
-    bool removes_castling_rights;
+    CastlingRightsRemoved castling_rights_removed; 
 } ChessMove;
 
 typedef struct

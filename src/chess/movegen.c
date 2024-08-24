@@ -238,11 +238,22 @@ MoveList generate_rook_moves(const ChessPiece *piece, Vec2i square, const ChessB
 
     bool is_queen_side_rook = square.x == 0 && (square.y == 0 || square.y == 7);
     bool is_king_side_rook = square.x == 7 && (square.y == 0 || square.y == 7);
-    bool does_move_remove_castling_rights =
-        piece->color == WHITE ? (is_king_side_rook && board->castling_rights.white_king_side) ||
-                                    (is_queen_side_rook && board->castling_rights.white_queen_side)
-                              : (is_king_side_rook && board->castling_rights.black_king_side) ||
-                                    (is_queen_side_rook && board->castling_rights.black_queen_side);
+
+    // check what rights are removed if the rook moves
+    CastlingRightsRemoved castling_rights_removed = CASTLING_RIGHT_NONE;
+    bool king_side_allowed = piece->color == WHITE ? board->castling_rights.white_king_side
+                                                   : board->castling_rights.black_king_side;
+    bool queen_side_allowed = piece->color == WHITE ? board->castling_rights.white_queen_side
+                                                    : board->castling_rights.black_queen_side;
+
+    if (is_queen_side_rook && queen_side_allowed)
+    {
+        castling_rights_removed = CASTLING_RIGHT_QUEENSIDE;
+    }
+    else if (is_king_side_rook && king_side_allowed)
+    {
+        castling_rights_removed = CASTLING_RIGHT_KINGSIDE;
+    }
 
     for (int i = 0; i < 4; i++)
     {
@@ -260,7 +271,7 @@ MoveList generate_rook_moves(const ChessPiece *piece, Vec2i square, const ChessB
                                                NORMAL,
                                                is_capture,
                                                is_capture ? piece_on_target_square->type : 0,
-                                               does_move_remove_castling_rights};
+                                               castling_rights_removed};
             }
 
             if (piece_on_target_square)
@@ -319,10 +330,24 @@ MoveList generate_king_moves(const ChessPiece *piece, Vec2i square, const ChessB
     int n_moves = 0;
     int directions[8][2] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}, {1, 1}, {1, -1}, {-1, -1}, {-1, 1}};
 
-    bool does_move_remove_castling_rights =
-        piece->color == WHITE
-            ? board->castling_rights.white_king_side || board->castling_rights.white_queen_side
-            : board->castling_rights.black_king_side || board->castling_rights.black_queen_side;
+    CastlingRightsRemoved castling_rights_removed = CASTLING_RIGHT_NONE;
+    bool king_side_allowed = piece->color == WHITE ? board->castling_rights.white_king_side
+                                                   : board->castling_rights.black_king_side;
+    bool queen_side_allowed = piece->color == WHITE ? board->castling_rights.white_queen_side
+                                                    : board->castling_rights.black_queen_side;
+
+    if (king_side_allowed && queen_side_allowed)
+    {
+        castling_rights_removed = CASTLING_RIGHT_BOTH;
+    }
+    else if (queen_side_allowed)
+    {
+        castling_rights_removed = CASTLING_RIGHT_QUEENSIDE;
+    }
+    else if (king_side_allowed)
+    {
+        castling_rights_removed = CASTLING_RIGHT_KINGSIDE;
+    }
 
     for (int i = 0; i < 8; i++)
     {
@@ -340,7 +365,7 @@ MoveList generate_king_moves(const ChessPiece *piece, Vec2i square, const ChessB
                                                NORMAL,
                                                is_capture,
                                                is_capture ? piece_on_target_square->type : 0,
-                                               does_move_remove_castling_rights};
+                                               castling_rights_removed};
             }
         }
     }
@@ -358,44 +383,54 @@ MoveList generate_king_moves(const ChessPiece *piece, Vec2i square, const ChessB
         // king side
         if (!is_check && king_side_allowed)
         {
+            bool is_castling_legal = true;
+
             Vec2i squares_to_check[] = {{5, square.y}, {6, square.y}};
             for (int i = 0; i < 2; i++)
             {
                 if (board->squares[squares_to_check[i].x][squares_to_check[i].y] != NULL)
                 {
                     // square is occupied
+                    is_castling_legal = false;
                     break;
                 }
                 if (chess_board_is_square_attacked(board, squares_to_check[i], piece->color))
                 {
+                    is_castling_legal = false;
                     break;
                 }
-                if (i == 1)
-                {
-                    moves[n_moves++] = (ChessMove){square, {6, square.y}, CASTLE_KINGSIDE, false, 0, true};
-                }
+            }
+            if (is_castling_legal)
+            {
+                moves[n_moves++] =
+                    (ChessMove){square, {6, square.y}, CASTLE_KINGSIDE, false, 0, castling_rights_removed};
             }
         }
 
         // queen side
         if (!is_check && queen_side_allowed)
         {
+            bool is_castling_legal = true;
+
             Vec2i squares_to_check[] = {{1, square.y}, {2, square.y}, {3, square.y}};
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < 3; i++)
             {
                 if (board->squares[squares_to_check[i].x][squares_to_check[i].y] != NULL)
                 {
                     // square is occupied
+                    is_castling_legal = false;
                     break;
                 }
-                if (chess_board_is_square_attacked(board, squares_to_check[i], piece->color))
+                if (i != 1 && chess_board_is_square_attacked(board, squares_to_check[i], piece->color))
                 {
+                    is_castling_legal = false;
                     break;
                 }
-                if (i == 1)
-                {
-                    moves[n_moves++] = (ChessMove){square, {2, square.y}, CASTLE_QUEENSIDE, false, 0, true};
-                }
+            }
+            if (is_castling_legal)
+            {
+                moves[n_moves++] =
+                    (ChessMove){square, {2, square.y}, CASTLE_QUEENSIDE, false, 0, castling_rights_removed};
             }
         }
     }
