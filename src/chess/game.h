@@ -35,6 +35,13 @@ typedef enum
     GAMEPLAY_STATE
 } GameStateType;
 
+typedef enum {
+    CHECKMATE,
+    STALEMATE,
+    DRAW_BY_AGREEMENT,
+    RESIGNATION,
+} GameEndReason;
+
 typedef void (*GameStateCB)(ChessGame *);
 typedef void (*GameStateUpdateCB)(ChessGame *, double);
 
@@ -73,7 +80,9 @@ typedef struct ChessGame
         ChessColor player_color; // white = 1, black = 0
         ChessColor current_turn;
         MoveList current_move_list;
-        bool is_in_check;
+        bool is_in_check : 1;
+        bool is_game_over : 1;
+        GameEndReason game_end_reason; 
     } chess_data;
 
     struct UIData

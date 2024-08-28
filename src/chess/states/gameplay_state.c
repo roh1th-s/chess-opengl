@@ -13,50 +13,13 @@
 
 #define PIECE_ANIMATION_DURATION 0.13
 
+static void empty_move_list(ChessGame *game);
+static void check_chess_state(ChessGame *game);
 static Vec2i calc_board_relative_pos(Vec2i board_top_left, Vec2i board_size, Vec2i square,
-                                     ChessColor plr_color)
-{
-    return (Vec2i){board_top_left.x + (plr_color == BLACK ? (7 - square.x) : square.x) * board_size.x / 8,
-                   board_top_left.y - (plr_color == WHITE ? (7 - square.y) : square.y) * board_size.y / 8};
-}
-
-static void empty_move_list(ChessGame *game)
-{
-    struct ChessData *chess_data = &game->chess_data;
-    free(chess_data->current_move_list.moves);
-    chess_data->current_move_list = (MoveList){NULL, 0};
-}
-
-static void check_chess_state(ChessGame *game)
-{
-    struct ChessData *chess_data = &game->chess_data;
-    // check
-    if (chess_board_is_in_check(&chess_data->board, chess_data->current_turn))
-    {
-        if (chess_board_is_in_checkmate(&chess_data->board, chess_data->current_turn, false))
-        {
-            // checkmate
-            printf("Checkmate\n");
-        }
-        else
-        {
-            // check
-            chess_data->is_in_check = true;
-            printf("Check\n");
-        }
-    }
-    else
-    {
-        if (chess_data->is_in_check)
-            chess_data->is_in_check = false;
-
-        if (chess_board_is_in_stalemate(&chess_data->board, chess_data->current_turn, false))
-        {
-            // stalemate
-            printf("Stalemate\n");
-        }
-    }
-}
+                                     ChessColor plr_color);
+static void handle_promotion_menu(ChessGame *game, bool left_btn_pressed);
+static void handle_board_interaction(ChessGame *game, bool left_btn_pressed);
+static void update_piece_animations(ChessGame *game, double delta_time);
 
 GameState *gameplay_state_init()
 {
@@ -146,177 +109,38 @@ void gameplay_state_update(ChessGame *game, double delta_time)
     Vec2i board_size = ui_data->board_size;
     Vec2f square_size = {(float)board_size.x / 8, (float)board_size.y / 8};
 
-    // promotion menu
-    if (ui_data->promotion_menu_open)
+    if (!chess_data->is_game_over)
     {
-        Vec2i menu_size = ui_data->promotion_menu_size;
-        Vec2i menu_pos = ui_data->promotion_menu_pos;
-
-        if (xpos >= menu_pos.x && xpos <= menu_pos.x + menu_size.x && ypos >= menu_pos.y - menu_size.y &&
-            ypos <= menu_pos.y && !ui_data->mouse_down && left_btn_pressed)
+        // promotion menu
+        if (ui_data->promotion_menu_open)
         {
-            int x = (int)((xpos - menu_pos.x) / square_size.x);
-            PieceType promoted_types[] = {PIECE_QUEEN, PIECE_ROOK, PIECE_BISHOP, PIECE_KNIGHT};
-            PieceType promoted_type = promoted_types[x];
-
-            ChessMove *move = ui_data->pending_promotion_move;
-            chess_board_promote_pawn(&chess_data->board, ui_data->selected_piece, move, promoted_type);
-            check_chess_state(game);
-
-            chess_data->current_turn = chess_data->current_turn == WHITE ? BLACK : WHITE;
-            empty_move_list(game);
-            ui_data->promotion_menu_open = false;
-
-            ui_data->piece_animations[0].animating_piece = ui_data->selected_piece;
-            ui_data->piece_animations[0].animating_from = ui_data->selected_square;
-            ui_data->piece_animations[0].animating_to = move->to;
-            ui_data->piece_animations[0].animation_time = 0;
+            handle_promotion_menu(game, left_btn_pressed);
         }
-    }
-    else if (xpos > board_pos.x && xpos < board_pos.x + board_size.x && ypos > board_pos.y - board_size.y &&
-             ypos < board_pos.y)
-    {
-        // mouse is inside board
-        int x = ((xpos - (float)board_pos.x) / square_size.x);
-        int y = 7 - (int)(((float)board_pos.y - ypos) / square_size.y);
-
-        if (chess_data->player_color == BLACK)
+        else if (xpos > board_pos.x && xpos < board_pos.x + board_size.x &&
+                 ypos > board_pos.y - board_size.y && ypos < board_pos.y)
         {
-            x = 7 - x;
-            y = 7 - y;
+            // mouse is inside board
+            handle_board_interaction(game, left_btn_pressed);
         }
-
-        if (!ui_data->mouse_down && left_btn_pressed)
+        else
         {
-            // mouse btn down
-            ui_data->mouse_down = true;
-
-            bool move_made = false;
-
-            if (ui_data->selected_piece)
+            if (!ui_data->mouse_down && left_btn_pressed)
             {
-                for (int i = 0; i < chess_data->current_move_list.n_moves; i++)
-                {
-                    ChessMove *move = &chess_data->current_move_list.moves[i];
-                    if (move->to.x == x && move->to.y == y)
-                    {
-                        if (move->type == PROMOTION)
-                        {
-                            ui_data->promotion_menu_open = true;
-                            ui_data->pending_promotion_move = move;
-                        }
-                        else
-                        {
-                            chess_board_make_move(&chess_data->board, ui_data->selected_piece, move);
-                            chess_data->current_turn = chess_data->current_turn == WHITE ? BLACK : WHITE;
-                            check_chess_state(game);
-
-                            // animate piece
-                            ui_data->piece_animations[0].animating_piece = ui_data->selected_piece;
-                            ui_data->piece_animations[0].animating_from = ui_data->selected_square;
-                            ui_data->piece_animations[0].animating_to = move->to;
-                            ui_data->piece_animations[0].animation_time = 0;
-
-                            if (move->type == CASTLE_KINGSIDE || move->type == CASTLE_QUEENSIDE)
-                            {
-                                Vec2i rook_from = move->type == CASTLE_KINGSIDE ? (Vec2i){7, move->to.y}
-                                                                                : (Vec2i){0, move->to.y};
-                                Vec2i rook_to = move->type == CASTLE_KINGSIDE ? (Vec2i){5, move->to.y}
-                                                                              : (Vec2i){3, move->to.y};
-                                ChessPiece *rook = chess_data->board.squares[rook_to.x][rook_to.y];
-                                
-                                // animate rook as well if castling
-                                ui_data->piece_animations[1].animating_piece = rook;
-                                ui_data->piece_animations[1].animating_from = rook_from;
-                                ui_data->piece_animations[1].animating_to = rook_to;
-                                ui_data->piece_animations[1].animation_time = 0;
-                            }
-
-                            empty_move_list(game);
-                        }
-
-                        move_made = true;
-                        break;
-                    }
-                }
+                // user clicked outside board
+                ui_data->mouse_down = true;
+                ui_data->selected_square = (Vec2i){-1, -1};
+                ui_data->selected_piece = NULL;
+                empty_move_list(game);
             }
-            ui_data->selected_square = (Vec2i){-1, -1};
-            ui_data->selected_piece = NULL;
-
-            if (!move_made && chess_data->board.squares[x][y] &&
-                chess_data->board.squares[x][y]->color == chess_data->current_turn)
+            else if (ui_data->mouse_down && !left_btn_pressed)
             {
-                // clicked on a piece
-                ui_data->selected_square = (Vec2i){x, y};
-                ui_data->selected_piece = chess_data->board.squares[x][y];
-                chess_data->current_move_list =
-                    generate_legal_moves(ui_data->selected_piece, (Vec2i){x, y}, &chess_data->board);
-            }
-        }
-        else if (ui_data->mouse_down && !left_btn_pressed)
-        {
-            // clicked and released
-            ui_data->mouse_down = false;
-
-            if (ui_data->selected_piece)
-            {
-                // move piece
-                for (int i = 0; i < chess_data->current_move_list.n_moves; i++)
-                {
-                    ChessMove *move = &chess_data->current_move_list.moves[i];
-                    if (move->to.x == x && move->to.y == y)
-                    {
-                        if (move->type == PROMOTION)
-                        {
-                            ui_data->promotion_menu_open = true;
-                            ui_data->pending_promotion_move = move;
-                        }
-                        else
-                        {
-                            chess_board_make_move(&chess_data->board, ui_data->selected_piece, move);
-                            chess_data->current_turn = chess_data->current_turn == WHITE ? BLACK : WHITE;
-                            check_chess_state(game);
-
-                            empty_move_list(game);
-                            ui_data->selected_square = (Vec2i){-1, -1};
-                            ui_data->selected_piece = NULL;
-                        }
-
-                        break;
-                    }
-                }
+                // user released mouse outside board
+                ui_data->mouse_down = false;
             }
         }
     }
-    else
-    {
-        if (!ui_data->mouse_down && left_btn_pressed)
-        {
-            // user clicked outside board
-            ui_data->selected_square = (Vec2i){-1, -1};
-            ui_data->selected_piece = NULL;
-            empty_move_list(game);
-        }
-        else if (ui_data->mouse_down && !left_btn_pressed)
-        {
-            // user released mouse outside board
-            ui_data->mouse_down = false;
-        }
-    }
 
-    // update animation
-    for (int i = 0; i < MAX_PIECE_ANIMATIONS; i++)
-    {
-        if (ui_data->piece_animations[i].animating_piece)
-        {
-            ui_data->piece_animations[i].animation_time += 1 / 60.0;
-            if (ui_data->piece_animations[i].animation_time >= PIECE_ANIMATION_DURATION)
-            {
-                ui_data->piece_animations[i].animating_piece = NULL;
-                ui_data->piece_animations[i].animation_time = 0;
-            }
-        }
-    }
+    update_piece_animations(game, delta_time);
 };
 
 void gameplay_state_render(ChessGame *game)
@@ -468,6 +292,253 @@ void gameplay_state_render(ChessGame *game)
             renderer_draw_rect_tex(r, tex, pos, (Vec2i){square_size.x, square_size.y});
         }
     }
+
+    // game over modal
+    if (chess_data->is_game_over)
+    {
+        bool is_plr_winner = chess_data->player_color != chess_data->current_turn;
+        Vec2i menu_size = (Vec2i){335, 130};
+        Vec2i menu_pos = (Vec2i){center.x - ui_data->promotion_menu_size.x / 2,
+                                 center.y + ui_data->promotion_menu_size.y / 2};
+        renderer_draw_rect_tex(r, game->menu_bg_texture, menu_pos, menu_size);
+
+        char *reason_text = chess_data->game_end_reason == CHECKMATE ? "Checkmate" : "Stalemate";
+        Color4i text_color = {255, 255, 255, 255};
+        renderer_draw_text_with_width(r, is_plr_winner ? "  You win!  " : "Game over!", game->primary_font,
+                                      (Vec2i){menu_pos.x + 20, menu_pos.y - 16}, menu_size.x - 40,
+                                      (Color4i){255, 255, 255, 255});
+        renderer_draw_text_with_width(
+            r, reason_text, game->secondary_font, (Vec2i){menu_pos.x + 40, menu_pos.y - 73}, menu_size.x - 80,
+            is_plr_winner ? (Color4i){255, 210, 111, 225} : (Color4i){245, 51, 51, 255});
+    }
 };
 
 void gameplay_state_cleanup(ChessGame *game) { ui_destroy_all(game->ui); };
+
+static Vec2i calc_board_relative_pos(Vec2i board_top_left, Vec2i board_size, Vec2i square,
+                                     ChessColor plr_color)
+{
+    return (Vec2i){board_top_left.x + (plr_color == BLACK ? (7 - square.x) : square.x) * board_size.x / 8,
+                   board_top_left.y - (plr_color == WHITE ? (7 - square.y) : square.y) * board_size.y / 8};
+}
+
+static void empty_move_list(ChessGame *game)
+{
+    struct ChessData *chess_data = &game->chess_data;
+    free(chess_data->current_move_list.moves);
+    chess_data->current_move_list = (MoveList){NULL, 0};
+}
+
+static void check_chess_state(ChessGame *game)
+{
+    struct ChessData *chess_data = &game->chess_data;
+    // check
+    if (chess_board_is_in_check(&chess_data->board, chess_data->current_turn))
+    {
+        if (chess_board_is_in_checkmate(&chess_data->board, chess_data->current_turn, false))
+        {
+            // checkmate
+            printf("Checkmate\n");
+            chess_data->is_game_over = true;
+            chess_data->game_end_reason = CHECKMATE;
+        }
+        else
+        {
+            // check
+            chess_data->is_in_check = true;
+            printf("Check\n");
+        }
+    }
+    else
+    {
+        if (chess_data->is_in_check)
+            chess_data->is_in_check = false;
+
+        if (chess_board_is_in_stalemate(&chess_data->board, chess_data->current_turn, false))
+        {
+            // stalemate
+            printf("Stalemate\n");
+            chess_data->is_game_over = true;
+            chess_data->game_end_reason = STALEMATE;
+        }
+    }
+}
+
+static void handle_promotion_menu(ChessGame *game, bool left_btn_pressed)
+{
+    struct ChessData *chess_data = &game->chess_data;
+    struct UIData *ui_data = &game->ui_data;
+
+    double xpos = ui_data->mouse_pos.x;
+    double ypos = ui_data->mouse_pos.y;
+
+    Vec2i menu_size = ui_data->promotion_menu_size;
+    Vec2i menu_pos = ui_data->promotion_menu_pos;
+
+    Vec2i board_size = ui_data->board_size;
+    Vec2f square_size = {(float)board_size.x / 8, (float)board_size.y / 8};
+
+    if (xpos >= menu_pos.x && xpos <= menu_pos.x + menu_size.x && ypos >= menu_pos.y - menu_size.y &&
+        ypos <= menu_pos.y && !ui_data->mouse_down && left_btn_pressed)
+    {
+        int x = (int)((xpos - menu_pos.x) / square_size.x);
+        PieceType promoted_types[] = {PIECE_QUEEN, PIECE_ROOK, PIECE_BISHOP, PIECE_KNIGHT};
+        PieceType promoted_type = promoted_types[x];
+
+        ChessMove *move = ui_data->pending_promotion_move;
+        chess_board_promote_pawn(&chess_data->board, ui_data->selected_piece, move, promoted_type);
+        chess_data->current_turn = chess_data->current_turn == WHITE ? BLACK : WHITE;
+        check_chess_state(game);
+
+        empty_move_list(game);
+        ui_data->promotion_menu_open = false;
+
+        ui_data->piece_animations[0].animating_piece = ui_data->selected_piece;
+        ui_data->piece_animations[0].animating_from = ui_data->selected_square;
+        ui_data->piece_animations[0].animating_to = move->to;
+        ui_data->piece_animations[0].animation_time = 0;
+    }
+}
+
+static void handle_board_interaction(ChessGame *game, bool left_btn_pressed)
+{
+    struct ChessData *chess_data = &game->chess_data;
+    struct UIData *ui_data = &game->ui_data;
+
+    double xpos = ui_data->mouse_pos.x;
+    double ypos = ui_data->mouse_pos.y;
+
+    Vec2i board_pos = ui_data->board_pos;
+    Vec2i board_size = ui_data->board_size;
+    Vec2f square_size = {(float)board_size.x / 8, (float)board_size.y / 8};
+
+    int x = ((xpos - (float)board_pos.x) / square_size.x);
+    int y = 7 - (int)(((float)board_pos.y - ypos) / square_size.y);
+
+    if (chess_data->player_color == BLACK)
+    {
+        x = 7 - x;
+        y = 7 - y;
+    }
+
+    if (!ui_data->mouse_down && left_btn_pressed)
+    {
+        // mouse btn down
+        ui_data->mouse_down = true;
+
+        bool move_made = false;
+
+        if (ui_data->selected_piece)
+        {
+            for (int i = 0; i < chess_data->current_move_list.n_moves; i++)
+            {
+                ChessMove *move = &chess_data->current_move_list.moves[i];
+                if (move->to.x == x && move->to.y == y)
+                {
+                    if (move->type == PROMOTION)
+                    {
+                        ui_data->promotion_menu_open = true;
+                        ui_data->pending_promotion_move = move;
+                    }
+                    else
+                    {
+                        chess_board_make_move(&chess_data->board, ui_data->selected_piece, move);
+                        chess_data->current_turn = chess_data->current_turn == WHITE ? BLACK : WHITE;
+                        check_chess_state(game);
+
+                        // animate piece
+                        ui_data->piece_animations[0].animating_piece = ui_data->selected_piece;
+                        ui_data->piece_animations[0].animating_from = ui_data->selected_square;
+                        ui_data->piece_animations[0].animating_to = move->to;
+                        ui_data->piece_animations[0].animation_time = 0;
+
+                        if (move->type == CASTLE_KINGSIDE || move->type == CASTLE_QUEENSIDE)
+                        {
+                            Vec2i rook_from = move->type == CASTLE_KINGSIDE ? (Vec2i){7, move->to.y}
+                                                                            : (Vec2i){0, move->to.y};
+                            Vec2i rook_to = move->type == CASTLE_KINGSIDE ? (Vec2i){5, move->to.y}
+                                                                          : (Vec2i){3, move->to.y};
+                            ChessPiece *rook = chess_data->board.squares[rook_to.x][rook_to.y];
+
+                            // animate rook as well if castling
+                            ui_data->piece_animations[1].animating_piece = rook;
+                            ui_data->piece_animations[1].animating_from = rook_from;
+                            ui_data->piece_animations[1].animating_to = rook_to;
+                            ui_data->piece_animations[1].animation_time = 0;
+                        }
+
+                        empty_move_list(game);
+                    }
+
+                    move_made = true;
+                    break;
+                }
+            }
+        }
+        ui_data->selected_square = (Vec2i){-1, -1};
+        ui_data->selected_piece = NULL;
+
+        if (!move_made && chess_data->board.squares[x][y] &&
+            chess_data->board.squares[x][y]->color == chess_data->current_turn)
+        {
+            // clicked on a piece
+            ui_data->selected_square = (Vec2i){x, y};
+            ui_data->selected_piece = chess_data->board.squares[x][y];
+            chess_data->current_move_list =
+                generate_legal_moves(ui_data->selected_piece, (Vec2i){x, y}, &chess_data->board);
+        }
+    }
+    else if (ui_data->mouse_down && !left_btn_pressed)
+    {
+        // clicked and released
+        ui_data->mouse_down = false;
+
+        if (ui_data->selected_piece)
+        {
+            // move piece
+            for (int i = 0; i < chess_data->current_move_list.n_moves; i++)
+            {
+                ChessMove *move = &chess_data->current_move_list.moves[i];
+                if (move->to.x == x && move->to.y == y)
+                {
+                    if (move->type == PROMOTION)
+                    {
+                        ui_data->promotion_menu_open = true;
+                        ui_data->pending_promotion_move = move;
+                    }
+                    else
+                    {
+                        chess_board_make_move(&chess_data->board, ui_data->selected_piece, move);
+                        chess_data->current_turn = chess_data->current_turn == WHITE ? BLACK : WHITE;
+                        check_chess_state(game);
+
+                        empty_move_list(game);
+                        ui_data->selected_square = (Vec2i){-1, -1};
+                        ui_data->selected_piece = NULL;
+                    }
+
+                    break;
+                }
+            }
+        }
+    }
+}
+
+static void update_piece_animations(ChessGame *game, double delta_time)
+{
+    struct UIData *ui_data = &game->ui_data;
+
+    for (int i = 0; i < MAX_PIECE_ANIMATIONS; i++)
+    {
+        if (ui_data->piece_animations[i].animating_piece)
+        {
+            ui_data->piece_animations[i].animation_time += delta_time;
+
+            if (ui_data->piece_animations[i].animation_time >= PIECE_ANIMATION_DURATION)
+            {
+                ui_data->piece_animations[i].animating_piece = NULL;
+                ui_data->piece_animations[i].animation_time = 0;
+            }
+        }
+    }
+}

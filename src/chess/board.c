@@ -264,9 +264,9 @@ bool chess_board_does_side_have_legal_moves(ChessBoard *self, ChessColor color)
                 MoveList move_list = generate_legal_moves(piece, (Vec2i){i, j}, self);
                 if (move_list.n_moves > 0)
                 {
-                    free(move_list.moves);
                     return true;
                 }
+                free(move_list.moves);
             }
         }
     }
