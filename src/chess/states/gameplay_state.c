@@ -2,6 +2,7 @@
 #include <math.h>
 
 #include "../../gfx/renderer.h"
+#include "../../ui/button.h"
 #include "../../ui/imagebox.h"
 #include "../../ui/textbox.h"
 #include "../../ui/ui.h"
@@ -20,6 +21,7 @@ static Vec2i calc_board_relative_pos(Vec2i board_top_left, Vec2i board_size, Vec
 static void handle_promotion_menu(ChessGame *game, bool left_btn_pressed);
 static void handle_board_interaction(ChessGame *game, bool left_btn_pressed);
 static void update_piece_animations(ChessGame *game, double delta_time);
+static void on_resign_btn_clicked(UIComponent *c, void *data);
 
 GameState *gameplay_state_init()
 {
@@ -82,13 +84,19 @@ void gameplay_state_setup(ChessGame *game)
     imagebox_create(game->ui, (Vec2i){36, 52}, (Vec2i){45, 45}, game->player_icon_texture,
                     (Color3i){255, 255, 255});
     textbox_create(game->ui, (Vec2i){81, 52}, (Vec2i){70, 15}, text_color, (Padding){0}, "You",
-                   game->secondary_font);
+                   game->tertiary_font);
 
     // opponent icon
     imagebox_create(game->ui, (Vec2i){661, 789}, (Vec2i){45, 45}, game->player_icon_texture,
                     (Color3i){255, 255, 255});
     textbox_create(game->ui, (Vec2i){610, 789}, (Vec2i){50, 15}, text_color, (Padding){0}, "AI",
-                   game->secondary_font);
+                   game->tertiary_font);
+
+    // resign button
+    UIComponent *resign_btn = button_create_with_texture(game->ui, (Vec2i){733, 600}, (Vec2i){80, 80},
+                                                         (Padding){5, 5, 5, 5}, (Color4i){190, 190, 190, 255},
+                                                         game->bg_texture2, "Resign", game->tertiary_font);
+    button_set_on_click(resign_btn, on_resign_btn_clicked, game);
 };
 
 void gameplay_state_update(ChessGame *game, double delta_time)
@@ -296,15 +304,23 @@ void gameplay_state_render(ChessGame *game)
     // game over modal
     if (chess_data->is_game_over)
     {
-        bool is_plr_winner = chess_data->player_color != chess_data->current_turn;
+        GameEndReason end_reason = chess_data->game_end_reason;
+        bool is_draw = end_reason == STALEMATE;
+        bool is_resignation = end_reason == RESIGNATION;
+        bool is_plr_winner =
+            !is_draw && !is_resignation && chess_data->player_color != chess_data->current_turn;
+
         Vec2i menu_size = (Vec2i){335, 130};
         Vec2i menu_pos = (Vec2i){center.x - ui_data->promotion_menu_size.x / 2,
                                  center.y + ui_data->promotion_menu_size.y / 2};
         renderer_draw_rect_tex(r, game->menu_bg_texture, menu_pos, menu_size);
 
-        char *reason_text = chess_data->game_end_reason == CHECKMATE ? "Checkmate" : "Stalemate";
+        char *reason_text =
+            end_reason == CHECKMATE ? "Checkmate" : (end_reason == RESIGNATION ? "Resignation" : "Stalemate");
+        char *end_text = is_plr_winner ? "  You win!  " : (is_draw ? "Draw" : "Game over");
+
         Color4i text_color = {255, 255, 255, 255};
-        renderer_draw_text_with_width(r, is_plr_winner ? "  You win!  " : "Game over!", game->primary_font,
+        renderer_draw_text_with_width(r, end_text, game->primary_font,
                                       (Vec2i){menu_pos.x + 20, menu_pos.y - 16}, menu_size.x - 40,
                                       (Color4i){255, 255, 255, 255});
         renderer_draw_text_with_width(
@@ -397,6 +413,10 @@ static void handle_promotion_menu(ChessGame *game, bool left_btn_pressed)
         ui_data->piece_animations[0].animating_from = ui_data->selected_square;
         ui_data->piece_animations[0].animating_to = move->to;
         ui_data->piece_animations[0].animation_time = 0;
+    }
+    else if (ui_data->mouse_down && !left_btn_pressed)
+    {
+        ui_data->mouse_down = false;
     }
 }
 
@@ -541,4 +561,15 @@ static void update_piece_animations(ChessGame *game, double delta_time)
             }
         }
     }
+}
+
+static void on_resign_btn_clicked(UIComponent *c, void *data)
+{
+    ChessGame *game = (ChessGame *)data;
+    struct ChessData *chess_data = &game->chess_data;
+
+    chess_data->is_game_over = true;
+    chess_data->game_end_reason = RESIGNATION;
+
+    printf("Player resigned\n");
 }

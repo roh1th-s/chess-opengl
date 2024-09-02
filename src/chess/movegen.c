@@ -42,13 +42,7 @@ MoveList generate_legal_moves(const ChessPiece *piece, Vec2i square, const Chess
     {
         ChessMove *move = &pseudo_legal_moves.moves[i];
 
-        ChessMove *last_move = NULL;
-        if (board->last_move != NULL)
-        {
-            // make a copy of the last move to restore it after testing the move
-            last_move = malloc(sizeof(ChessMove));
-            *last_move = *board->last_move;
-        }
+        ChessMove *prev_last_move = NULL;
 
         if (move->type == PROMOTION)
         {
@@ -57,6 +51,12 @@ MoveList generate_legal_moves(const ChessPiece *piece, Vec2i square, const Chess
 
             for (int j = 0; j < 2; j++)
             {
+                if (board->last_move != NULL)
+                {
+                    // make a copy of the last move to restore it after testing the move
+                    prev_last_move = malloc(sizeof(ChessMove));
+                    *prev_last_move = *board->last_move;
+                }
                 chess_board_promote_pawn(board, piece, move, types_to_check[j]);
 
                 if (chess_board_is_in_check(board, piece->color))
@@ -64,7 +64,7 @@ MoveList generate_legal_moves(const ChessPiece *piece, Vec2i square, const Chess
                     is_legal = false;
                 }
 
-                chess_board_undo_last_move(board, last_move);
+                chess_board_undo_last_move(board, prev_last_move);
 
                 if (!is_legal)
                 {
@@ -79,6 +79,13 @@ MoveList generate_legal_moves(const ChessPiece *piece, Vec2i square, const Chess
         }
         else
         {
+            if (board->last_move != NULL)
+            {
+                // make a copy of the last move to restore it after testing the move
+                prev_last_move = malloc(sizeof(ChessMove));
+                *prev_last_move = *board->last_move;
+            }
+
             chess_board_make_move(board, piece, move);
 
             if (!chess_board_is_in_check(board, piece->color))
@@ -86,7 +93,7 @@ MoveList generate_legal_moves(const ChessPiece *piece, Vec2i square, const Chess
                 legal_moves[n_legal_moves++] = *move;
             }
 
-            chess_board_undo_last_move(board, last_move);
+            chess_board_undo_last_move(board, prev_last_move);
         }
     }
 

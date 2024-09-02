@@ -124,8 +124,10 @@ void button_update(UIComponent *self, UIManager *ui_manager)
         else if (button->mouse_down && !ui_manager->mouse_state.left_button)
         {
             // user released mouse inside button
-            button->on_click(self, button->on_click_data);
             button->mouse_down = false;
+
+            if (button->on_click != NULL)
+                button->on_click(self, button->on_click_data);
         }
     }
     else

@@ -70,6 +70,7 @@ typedef struct ChessGame
 
     Font *primary_font;
     Font *secondary_font;
+    Font *tertiary_font;
 
     GameStateType current_state;
     GameState *states[2];

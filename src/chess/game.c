@@ -41,6 +41,7 @@ void game_init(ChessGame *self, Renderer *r)
 
     LOAD_FONT(self->primary_font, "res/fonts/Montserrat-SemiBold.ttf", 200);
     LOAD_FONT(self->secondary_font, "res/fonts/Montserrat-Regular.ttf", 84);
+    LOAD_FONT(self->tertiary_font, "res/fonts/Montserrat-Regular.ttf", 20);
 
     endTime = (float)clock() / CLOCKS_PER_SEC;
     printf("Loaded assets in %fs\n", endTime - startTime);
