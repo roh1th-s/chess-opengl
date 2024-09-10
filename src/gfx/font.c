@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
-#include "GLEW/glew.h"
+#include <GL/glew.h>
 
 #ifdef _WIN32
 #define realpath(N, R) _fullpath((R), (N), _MAX_PATH)

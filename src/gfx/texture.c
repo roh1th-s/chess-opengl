@@ -1,9 +1,13 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include "STB/stb_image.h"
-#include <GLEW/glew.h>
+#ifdef __EMSCRIPTEN__
+#include <stb_image.h>
+#else
+#include <STB/stb_image.h>
+#endif
+#include <GL/glew.h>
 
-#include "texture.h"
 #include "gl_error.h"
+#include "texture.h"
 
 int texture_create(Texture *texture, const char *file_name)
 {
@@ -27,7 +31,8 @@ int texture_create(Texture *texture, const char *file_name)
     return 0;
 }
 
-int texture_new_from_buffer(Texture *texture, const unsigned char *data, int width, int height, int n_channels)
+int texture_new_from_buffer(Texture *texture, const unsigned char *data, int width, int height,
+                            int n_channels)
 {
     // gen and bind texture
     GL_CALL(glGenTextures(1, texture));
@@ -43,7 +48,7 @@ int texture_new_from_buffer(Texture *texture, const unsigned char *data, int wid
     switch (n_channels)
     {
     case 1:
-        format = GL_RED;
+        format = GL_R8;
         break;
     case 3:
         format = GL_RGB;
@@ -57,10 +62,11 @@ int texture_new_from_buffer(Texture *texture, const unsigned char *data, int wid
     }
 
     // add image data to texture
-    GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data));
+    GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format == GL_R8 ? GL_RED : format,
+                         GL_UNSIGNED_BYTE, data));
 
     texture_unbind(GL_TEXTURE0);
-    
+
     return 0;
 }
 

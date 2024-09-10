@@ -1,7 +1,7 @@
 #if !defined(VAO_H)
 #define VAO_H
 
-#include <GLEW/glew.h>
+#include <GL/glew.h>
 
 typedef struct
 {

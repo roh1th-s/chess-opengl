@@ -1,6 +1,6 @@
 #include "gl_error.h"
 
-#include <GLEW/glew.h>
+#include <GL/glew.h>
 #include <stdbool.h>
 #include <stdio.h>
 

@@ -14,4 +14,4 @@ void main()
       fragColor = texture(tex, texCoord) * vertexColor;
    else
       fragColor = vertexColor;
-};
+}

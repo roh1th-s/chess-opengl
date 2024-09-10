@@ -1,4 +1,14 @@
+#ifdef _WIN32
 #include <synchapi.h>
+#else
+#include <unistd.h>
+#endif
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#endif
+
 #include <time.h>
 
 #include "../gfx/font.h"
@@ -26,7 +36,7 @@ void game_init(ChessGame *self, Renderer *r)
     LOAD_TEXTURE(self->menu_bg_texture, "res/textures/menu_bg.png");
     LOAD_TEXTURE(self->player_icon_texture, "res/textures/player.png");
     LOAD_TEXTURE(self->circle_texture, "res/textures/circle.png");
-    
+
     char colors[2] = {'w', 'b'};
     char pieces[6] = {'p', 'n', 'b', 'r', 'k', 'q'};
     for (int i = 0; i < 2; i++)
@@ -51,6 +61,48 @@ void game_init(ChessGame *self, Renderer *r)
     self->states[GAMEPLAY_STATE] = gameplay_state_init();
 }
 
+struct loop_cb_args
+{
+    ChessGame *game;
+    double *last_time, *current_time, *delta_time;
+};
+
+void game_loop(void *data)
+{   
+    struct loop_cb_args *args = (struct loop_cb_args *)data;
+    ChessGame *self = args->game;
+    Renderer *r = self->renderer;
+
+    double *last_time = args->last_time;
+    double *current_time = args->current_time;
+    double *delta_time = args->delta_time;
+
+    *current_time = glfwGetTime();
+    *delta_time = *current_time - *last_time;
+    *last_time = *current_time;
+
+    game_update(self, *delta_time);
+
+    game_render(self);
+
+    // char fps[10];
+    // sprintf(fps, "%.2f", 1.0 / deltaTime);
+    // renderer_draw_text(r, "FPS: ", self->secondary_font, (Vec2i){0, w->height}, (Vec2i){100, 30},
+    //                    (Color3i){255, 255, 255, 255});
+    // renderer_draw_text(r, fps, self->secondary_font, (Vec2i){100, w->height}, (Vec2i){150, 30},
+    //                    (Color3i){255, 255, 255, 255});
+
+    window_swap_buffers(r->window);
+
+    window_poll_events();
+
+#ifdef _WIN32
+    Sleep(1);
+#else
+    sleep(0.001);
+#endif
+}
+
 void game_start(ChessGame *self)
 {
     Renderer *r = self->renderer;
@@ -62,6 +114,10 @@ void game_start(ChessGame *self)
     double current_time;
     double delta_time;
 
+#ifdef __EMSCRIPTEN__
+    struct loop_cb_args args = {self, &last_time, &current_time, &delta_time};
+    emscripten_set_main_loop_arg(game_loop, (void *)&args, 0, 1);
+#else
     // game loop
     while (!window_should_close(w))
     {
@@ -84,8 +140,13 @@ void game_start(ChessGame *self)
 
         window_poll_events();
 
+#ifdef _WIN32
         Sleep(1);
+#else
+        sleep(0.001);
+#endif
     }
+#endif
 }
 
 void game_switch_to_state(ChessGame *self, GameStateType state)

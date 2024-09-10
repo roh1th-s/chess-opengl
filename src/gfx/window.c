@@ -1,6 +1,5 @@
 #include <GLFW/glfw3.h>
 #include <stdio.h>
-#include <windows.h>
 
 #include "window.h"
 
@@ -15,8 +14,11 @@ int window_init(Window *self, int width, int height, const char *title)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+#ifndef __EMSCRIPTEN__
     glfwWindowHint(GLFW_SAMPLES, 4); // for MSAA
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+#endif
 
     GLFWwindow *glfw_window = glfwCreateWindow(width, height, title, NULL, NULL);
 

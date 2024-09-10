@@ -571,6 +571,9 @@ static void on_resign_btn_clicked(UIComponent *c, void *data)
     ChessGame *game = (ChessGame *)data;
     struct ChessData *chess_data = &game->chess_data;
 
+    if (chess_data->is_game_over)
+        return;
+
     chess_data->is_game_over = true;
     chess_data->game_end_reason = RESIGNATION;
 

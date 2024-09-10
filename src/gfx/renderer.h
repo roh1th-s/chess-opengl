@@ -2,7 +2,7 @@
 #define RENDERER_H
 
 #include "GLFW/glfw3.h"
-#include "GLEW/glew.h"
+#include <GL/glew.h>
 #include "window.h"
 #include "vao.h"
 #include "texture.h"

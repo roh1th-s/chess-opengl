@@ -1,11 +1,11 @@
-#include <GLEW/glew.h>
-#include <string.h>
-#include <stdlib.h>
+#include <GL/glew.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "shader.h"
-#include "gl_error.h"
 #include "../types.h"
+#include "gl_error.h"
+#include "shader.h"
 
 static char *load_file(const char *path)
 {
@@ -34,7 +34,8 @@ static GLuint compile_shader(char *source, GLuint type)
 {
     GLuint id;
     GL_CALL(id = glCreateShader(type));
-    GL_CALL(glShaderSource(id, 1, (const char *const *)&source, NULL)); // null means the string is null terminated
+    GL_CALL(glShaderSource(id, 1, (const char *const *)&source,
+                           NULL)); // null means the string is null terminated
     GL_CALL(glCompileShader(id));
 
     GLint result;
@@ -48,7 +49,8 @@ static GLuint compile_shader(char *source, GLuint type)
         char message[length];
         GL_CALL(glGetShaderInfoLog(id, length, &length, message));
 
-        printf("Failed to compile %s shader: %s\n", type == GL_VERTEX_SHADER ? "vertex" : "fragment", message);
+        printf("Failed to compile %s shader: %s\n", type == GL_VERTEX_SHADER ? "vertex" : "fragment",
+               message);
         GL_CALL(glDeleteShader(id));
         return 0;
     }
@@ -60,11 +62,36 @@ GLuint shader_new(const char *vertex_shader_path, const char *frag_shader_path)
 {
     GLuint program = glCreateProgram();
 
-    char *vertexShader = load_file(vertex_shader_path);
-    char *fragmentShader = load_file(frag_shader_path);
+    char *vertex_shader = load_file(vertex_shader_path);
+    char *fragment_shader = load_file(frag_shader_path);
 
-    GLuint vs = compile_shader(vertexShader, GL_VERTEX_SHADER);
-    GLuint fs = compile_shader(fragmentShader, GL_FRAGMENT_SHADER);
+#if __EMSCRIPTEN__
+    // replace version directive
+    char *version = "#version 300 es\n";
+
+    int first_line_len = strchr(vertex_shader, '\n') - vertex_shader + 1;
+
+    char *versioned_vertex_shader =
+        (char *)malloc(strlen(version) + strlen(vertex_shader) - first_line_len + 1);
+    strcpy(versioned_vertex_shader, version);
+    strcat(versioned_vertex_shader, vertex_shader + first_line_len);
+    free(vertex_shader);
+    vertex_shader = versioned_vertex_shader;
+
+    char *precision_specifier = "precision mediump float;\n";
+
+    first_line_len = strchr(fragment_shader, '\n') - fragment_shader + 1;
+    char *versioned_fragment_shader = (char *)malloc(strlen(version) + strlen(precision_specifier) +
+                                                     strlen(fragment_shader) - first_line_len + 1);
+    strcpy(versioned_fragment_shader, version);
+    strcat(versioned_fragment_shader, precision_specifier);
+    strcat(versioned_fragment_shader, fragment_shader + first_line_len);
+    free(fragment_shader);
+    fragment_shader = versioned_fragment_shader;
+#endif
+
+    GLuint vs = compile_shader(vertex_shader, GL_VERTEX_SHADER);
+    GLuint fs = compile_shader(fragment_shader, GL_FRAGMENT_SHADER);
 
     GL_CALL(glAttachShader(program, vs));
     GL_CALL(glAttachShader(program, fs));
@@ -78,15 +105,9 @@ GLuint shader_new(const char *vertex_shader_path, const char *frag_shader_path)
     return program;
 }
 
-void shader_use(GLuint shader)
-{
-    GL_CALL(glUseProgram(shader));
-}
+void shader_use(GLuint shader) { GL_CALL(glUseProgram(shader)); }
 
-void shader_delete(GLuint shader)
-{
-    GL_CALL(glDeleteProgram(shader));
-}
+void shader_delete(GLuint shader) { GL_CALL(glDeleteProgram(shader)); }
 
 void shader_uniform_int(GLuint shader, const char *name, int value)
 {

@@ -1,7 +1,7 @@
 #if !defined(TEX_H)
 #define TEX_H
 
-#include <GLEW/glew.h>
+#include <GL/glew.h>
 
 typedef GLuint Texture;
 
