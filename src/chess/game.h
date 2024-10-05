@@ -104,6 +104,7 @@ typedef struct ChessGame
         ChessPiece *selected_piece;
         Vec2i selected_square;
         bool promotion_menu_open;
+        ChessPiece *pawn_to_promote;
         ChessMove *pending_promotion_move;
         Vec2i promotion_menu_pos;
         Vec2i promotion_menu_size;

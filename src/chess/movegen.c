@@ -7,29 +7,66 @@
 MoveList generate_pseudo_legal_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board,
                                      bool only_attacking)
 {
+    MoveList moves;
+
     switch (piece->type)
     {
     case PIECE_PAWN:
-        return generate_pawn_moves(piece, square, board, only_attacking);
+        moves = generate_pawn_moves(piece, square, board, only_attacking);
         break;
     case PIECE_KNIGHT:
-        return generate_knight_moves(piece, square, board);
+        moves = generate_knight_moves(piece, square, board);
         break;
     case PIECE_BISHOP:
-        return generate_bishop_moves(piece, square, board);
+        moves = generate_bishop_moves(piece, square, board);
         break;
     case PIECE_ROOK:
-        return generate_rook_moves(piece, square, board);
+        moves = generate_rook_moves(piece, square, board);
         break;
     case PIECE_QUEEN:
-        return generate_queen_moves(piece, square, board);
+        moves = generate_queen_moves(piece, square, board);
         break;
     case PIECE_KING:
-        return generate_king_moves(piece, square, board, only_attacking);
+        moves = generate_king_moves(piece, square, board, only_attacking);
         break;
+    default:
+        moves = (MoveList){NULL, 0};
     }
 
-    return (MoveList){NULL, 0};
+    // account for castling rights removed when a rook is captured
+    for (int i = 0; i < moves.n_moves; i++)
+    {
+        ChessMove *move = &moves.moves[i];
+        if (move->is_capture && move->captured_type == PIECE_ROOK)
+        {
+            CastlingRightsRemoved opp_castling_rights_removed = CASTLING_RIGHT_NONE;
+            ChessColor captured_rook_color = !piece->color;
+
+            int x = move->to.x;
+            int y = move->to.y;
+
+            bool is_queen_side_rook = x == 0 && (y == 0 || y == 7);
+            bool is_king_side_rook = x == 7 && (y == 0 || y == 7);
+
+            bool king_side_allowed = captured_rook_color == WHITE ? board->castling_rights.white_king_side
+                                                         : board->castling_rights.black_king_side;
+            bool queen_side_allowed = captured_rook_color == WHITE ? board->castling_rights.white_queen_side
+                                                          : board->castling_rights.black_queen_side;
+
+            if (is_queen_side_rook && queen_side_allowed)
+            {
+                opp_castling_rights_removed = CASTLING_RIGHT_QUEENSIDE;
+            }
+            else if (is_king_side_rook && king_side_allowed)
+            {
+                opp_castling_rights_removed = CASTLING_RIGHT_KINGSIDE;
+            }
+
+            move->opponent_castling_rights_removed = opp_castling_rights_removed;
+        }
+    }
+
+    return moves;
 }
 
 MoveList generate_legal_moves(const ChessPiece *piece, Vec2i square, const ChessBoard *board)

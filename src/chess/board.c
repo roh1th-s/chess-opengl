@@ -5,6 +5,9 @@
 #include "board.h"
 #include "movegen.h"
 
+static void update_castling_rights(ChessBoard *self, ChessColor color, CastlingRightsRemoved removed_rights,
+                                   bool restore_rights);
+
 void chess_board_init(ChessBoard *self)
 {
     // pawns
@@ -111,22 +114,14 @@ void chess_board_make_move(ChessBoard *self, ChessPiece *piece, ChessMove *move)
     CastlingRightsRemoved removed_rights = move->castling_rights_removed;
     if (removed_rights != CASTLING_RIGHT_NONE)
     {
-        if (removed_rights == CASTLING_RIGHT_KINGSIDE)
-        {
-            piece->color == WHITE ? (self->castling_rights.white_king_side = 0)
-                                  : (self->castling_rights.black_king_side = 0);
-        }
-        else if (removed_rights == CASTLING_RIGHT_QUEENSIDE)
-        {
-            piece->color == WHITE ? (self->castling_rights.white_queen_side = 0)
-                                  : (self->castling_rights.black_queen_side = 0);
-        }
-        else if (removed_rights == CASTLING_RIGHT_BOTH)
-        {
-            piece->color == WHITE
-                ? (self->castling_rights.white_king_side = 0, self->castling_rights.white_queen_side = 0)
-                : (self->castling_rights.black_king_side = 0, self->castling_rights.black_queen_side = 0);
-        }
+        update_castling_rights(self, piece->color, removed_rights, false);
+    }
+
+    // account for castling rights removed when a rook is captured
+    CastlingRightsRemoved opp_castling_rights_removed = move->opponent_castling_rights_removed;
+    if (opp_castling_rights_removed != CASTLING_RIGHT_NONE)
+    {
+        update_castling_rights(self, !piece->color, opp_castling_rights_removed, false);
     }
 
     if (self->last_move != NULL)
@@ -194,22 +189,14 @@ void chess_board_undo_last_move(ChessBoard *self, ChessMove *prev_last_move)
     CastlingRightsRemoved removed_rights = last_move->castling_rights_removed;
     if (removed_rights != CASTLING_RIGHT_NONE)
     {
-        if (removed_rights == CASTLING_RIGHT_KINGSIDE)
-        {
-            moved_piece->color == WHITE ? (self->castling_rights.white_king_side = 1)
-                                        : (self->castling_rights.black_king_side = 1);
-        }
-        else if (removed_rights == CASTLING_RIGHT_QUEENSIDE)
-        {
-            moved_piece->color == WHITE ? (self->castling_rights.white_queen_side = 1)
-                                        : (self->castling_rights.black_queen_side = 1);
-        }
-        else if (removed_rights == CASTLING_RIGHT_BOTH)
-        {
-            moved_piece->color == WHITE
-                ? (self->castling_rights.white_king_side = 1, self->castling_rights.white_queen_side = 1)
-                : (self->castling_rights.black_king_side = 1, self->castling_rights.black_queen_side = 1);
-        }
+        update_castling_rights(self, moved_piece->color, removed_rights, true);
+    }
+
+    // restore castling rights removed when a rook is captured
+    CastlingRightsRemoved opp_castling_rights_removed = last_move->opponent_castling_rights_removed;
+    if (opp_castling_rights_removed != CASTLING_RIGHT_NONE)
+    {
+        update_castling_rights(self, !moved_piece->color, opp_castling_rights_removed, true);
     }
 
     if (self->last_move != NULL)
@@ -291,4 +278,28 @@ bool chess_board_is_in_stalemate(ChessBoard *self, ChessColor color, bool do_che
     }
 
     return !chess_board_does_side_have_legal_moves(self, color);
+}
+
+static void update_castling_rights(ChessBoard *self, ChessColor color, CastlingRightsRemoved removed_rights,
+                                   bool restore_rights)
+{
+    bool new_state = restore_rights ? 1 : 0;
+
+    if (removed_rights == CASTLING_RIGHT_KINGSIDE)
+    {
+        color == WHITE ? (self->castling_rights.white_king_side = new_state)
+                       : (self->castling_rights.black_king_side = new_state);
+    }
+    else if (removed_rights == CASTLING_RIGHT_QUEENSIDE)
+    {
+        color == WHITE ? (self->castling_rights.white_queen_side = new_state)
+                       : (self->castling_rights.black_queen_side = new_state);
+    }
+    else if (removed_rights == CASTLING_RIGHT_BOTH)
+    {
+        color == WHITE ? (self->castling_rights.white_king_side = new_state,
+                          self->castling_rights.white_queen_side = new_state)
+                       : (self->castling_rights.black_king_side = new_state,
+                          self->castling_rights.black_queen_side = new_state);
+    }
 }

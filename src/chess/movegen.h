@@ -37,6 +37,7 @@ typedef struct ChessMove
     bool is_capture;
     PieceType captured_type;
     CastlingRightsRemoved castling_rights_removed; 
+    CastlingRightsRemoved opponent_castling_rights_removed;
 } ChessMove;
 
 typedef struct

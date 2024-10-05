@@ -402,12 +402,13 @@ static void handle_promotion_menu(ChessGame *game, bool left_btn_pressed)
         PieceType promoted_type = promoted_types[x];
 
         ChessMove *move = ui_data->pending_promotion_move;
-        chess_board_promote_pawn(&chess_data->board, ui_data->selected_piece, move, promoted_type);
+        chess_board_promote_pawn(&chess_data->board, ui_data->pawn_to_promote, move, promoted_type);
         chess_data->current_turn = chess_data->current_turn == WHITE ? BLACK : WHITE;
         check_chess_state(game);
 
         empty_move_list(game);
         ui_data->promotion_menu_open = false;
+        ui_data->pawn_to_promote = NULL;
 
         ui_data->piece_animations[0].animating_piece = ui_data->selected_piece;
         ui_data->piece_animations[0].animating_from = ui_data->selected_square;
@@ -459,6 +460,7 @@ static void handle_board_interaction(ChessGame *game, bool left_btn_pressed)
                     {
                         ui_data->promotion_menu_open = true;
                         ui_data->pending_promotion_move = move;
+                        ui_data->pawn_to_promote = ui_data->selected_piece;
                     }
                     else
                     {
@@ -525,6 +527,7 @@ static void handle_board_interaction(ChessGame *game, bool left_btn_pressed)
                     {
                         ui_data->promotion_menu_open = true;
                         ui_data->pending_promotion_move = move;
+                        ui_data->pawn_to_promote = ui_data->selected_piece;
                     }
                     else
                     {
