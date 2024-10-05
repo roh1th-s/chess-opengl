@@ -89,7 +89,7 @@ void gameplay_state_setup(ChessGame *game)
     // opponent icon
     imagebox_create(game->ui, (Vec2i){661, 789}, (Vec2i){45, 45}, game->player_icon_texture,
                     (Color3i){255, 255, 255});
-    textbox_create(game->ui, (Vec2i){610, 789}, (Vec2i){50, 15}, text_color, (Padding){0}, "AI",
+    textbox_create(game->ui, (Vec2i){555, 789}, (Vec2i){50, 15}, text_color, (Padding){0}, "Opponent",
                    game->tertiary_font);
 
     // resign button
