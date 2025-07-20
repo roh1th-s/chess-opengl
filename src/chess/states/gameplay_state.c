@@ -69,6 +69,7 @@ void gameplay_state_setup(ChessGame *game)
     chess_data->player_color = WHITE;
     chess_data->current_move_list = (MoveList){NULL, 0};
     chess_data->is_in_check = false;
+    chess_data->is_game_over = false;
 
     Color4i text_color = {255, 255, 255, 255};
 
