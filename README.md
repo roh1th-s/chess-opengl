@@ -15,7 +15,7 @@ Fully functional chess game written using C and OpenGL with minimal external lib
 ## Building:
 
 ### Prerequisites:
-- **Windows**: MSYS2/MinGW toolchain (tested). Pre-compiled libraries are provided in `/lib` for Windows x64 MinGW.
+- **Windows**: MSYS2/MinGW toolchain (tested). Pre-compiled libraries are provided in `/lib` for MSYS2 UCRT64 environment.
 - **Linux**: System packages required:
   - `libfreetype-dev` (or `freetype2-devel`)
   - `libglew-dev` (or `glew-devel`) 
