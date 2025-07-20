@@ -13,8 +13,16 @@ Fully functional chess game written using C and OpenGL with minimal external lib
 - Piece movement animations
 
 ## Building:
-**Note**: The provided Makefile currently only works on Windows. Has been tested with MSYS2/MinGW. Provided libraries in `/lib` are for Windows  x64  MinGW.
 
+### Prerequisites:
+- **Windows**: MSYS2/MinGW toolchain (tested). Pre-compiled libraries are provided in `/lib` for Windows x64 MinGW.
+- **Linux**: System packages required:
+  - `libfreetype-dev` (or `freetype2-devel`)
+  - `libglew-dev` (or `glew-devel`) 
+  - `libglfw3-dev` (or `glfw-devel`)
+  - Standard build tools (`gcc`, `make`)
+
+### Build Instructions:
 - Clone this repository
 ```
 git clone https://github.com/roh1th-s/chess-opengl.git

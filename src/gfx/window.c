@@ -1,6 +1,5 @@
 #include <GLFW/glfw3.h>
 #include <stdio.h>
-#include <windows.h>
 
 #include "window.h"
 

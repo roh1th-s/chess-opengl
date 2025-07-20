@@ -20,8 +20,10 @@ int texture_create(Texture *texture, const char *file_name)
 
     texture_new_from_buffer(texture, data, width, height, n_channels);
 
+    #ifdef _WIN32
     GL_CALL(glGenerateMipmap(GL_TEXTURE_2D));
-
+    #endif
+    
     stbi_image_free(data);
 
     return 0;

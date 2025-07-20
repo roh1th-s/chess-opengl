@@ -1,4 +1,9 @@
+#ifdef _WIN32
 #include <synchapi.h>
+#else
+#include <unistd.h>
+#endif 
+
 #include <time.h>
 
 #include "../gfx/font.h"
@@ -84,7 +89,11 @@ void game_start(ChessGame *self)
 
         window_poll_events();
 
+        #ifdef _WIN32
         Sleep(1);
+        #else
+        sleep(0.001);
+        #endif
     }
 }
 
