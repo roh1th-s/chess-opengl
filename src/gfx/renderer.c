@@ -10,11 +10,17 @@
 #include "window.h"
 
 int renderer_init(Renderer *self, Window *window)
-{
-    if (glewInit() != GLEW_OK)
+{   
+    GLenum status = glewInit();
+    if (status != GLEW_OK)
     {
-        printf("Error!\n");
-        return -1;
+        printf("Error in glew init!\n");
+        if (status == GLEW_ERROR_NO_GLX_DISPLAY) {
+            printf("GLEW error: No GLX display\n");
+        } else {
+            printf("GLEW error: %s\n", glewGetErrorString(status));
+            exit(EXIT_FAILURE);
+        }
     }
 
     printf("Hardware: %s\n", glGetString(GL_RENDERER));

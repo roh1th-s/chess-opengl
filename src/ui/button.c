@@ -20,6 +20,9 @@ UIComponent *button_create(UIManager *ui_manager, Vec2i pos, Vec2i size, Padding
     button->font = font;
     button->use_texture = false;
     button->mouse_down = false;
+    button->is_hovered = false;
+    button->on_click_data = NULL;
+    button->on_click = NULL;
 
     self->component = button;
     self->type = BUTTON;

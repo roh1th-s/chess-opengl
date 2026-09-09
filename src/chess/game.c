@@ -70,6 +70,8 @@ void game_start(ChessGame *self)
     // game loop
     while (!window_should_close(w))
     {
+        window_poll_events();
+
         current_time = glfwGetTime();
         delta_time = current_time - last_time;
         last_time = current_time;
@@ -86,8 +88,6 @@ void game_start(ChessGame *self)
         //                    (Color3i){255, 255, 255, 255});
 
         window_swap_buffers(w);
-
-        window_poll_events();
 
         #ifdef _WIN32
         Sleep(1);
